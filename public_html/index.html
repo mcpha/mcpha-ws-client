@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 John Preston<byhisdeeds@gmail.com> NURAS.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+    <title>MCPHA Client</title>
+
+    <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+
+    <!-- CSS  -->
+    <link href="css/material-icons.css" rel="stylesheet">
+    <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen"/>
+    <link href="css/style.css" type="text/css" rel="stylesheet" media="screen"/>
+  </head>
+  <body>
+    <!--Import jQuery before materialize.js-->
+    <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="js/materialize.min.js"></script>
+    <script type="text/javascript" src="js/jquery.multilevelpushmenu.min.js"></script>
+    <script type="text/javascript" src="js/long.js"></script>
+    <script type="text/javascript" src="js/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="js/attrchange.js"></script>
+
+    <script type="text/javascript">
+      const DEVICE_CONNECTION = "device-connection";
+      
+      const MCPHA_SIDEBAR_OPEN = "mcpha_sidebar_open";
+      const MCPHA_SELECTED_TAB = "mcpha_selected_tab";
+      const MCPHA_DEC_FACTOR = "mcpha_dec_factor";
+      const MCPHA_DEVICE_ADDR = "mcpha_device_addr";
+      const MCPHA_CONNECT_DEVICE = "mcpha_connect_device";
+      const MCPHA_MCA_1_IN_NEG = "mcpha_mca_1_in_neg";
+      const MCPHA_MCA_1_ACQ_TIME = "mcpha_mca_1_acq_time";
+      const MCPHA_MCA_1_TRIG_MODE = "mcpha_mca_1_trig_mode";
+      const MCPHA_MCA_1_TRIG_SOURCE = "mcpha_mca_1_trig_source";
+      const MCPHA_MCA_1_TRIG_EDGE = "mcpha_mca_1_trig_edge";
+      const MCPHA_MCA_1_TRIG_LEVEL = "mcpha_mca_1_trig_level";
+      const MCPHA_MCA_2_IN_NEG = "mcpha_mca_2_in_neg";
+      const MCPHA_MCA_2_ACQ_TIME = "mcpha_mca_2_acq_time";
+      const MCPHA_MCA_2_TRIG_MODE = "mcpha_mca_2_trig_mode";
+      const MCPHA_MCA_2_TRIG_SOURCE = "mcpha_mca_2_trig_source";
+      const MCPHA_MCA_2_TRIG_EDGE = "mcpha_mca_2_trig_edge";
+      const MCPHA_MCA_2_TRIG_LEVEL = "mcpha_mca_2_trig_level";
+      const MCPHA_OSC_1_IN = "mcpha_osc_1_in";
+      const MCPHA_OSC_1_IN_NEG = "mcpha_osc_1_in_neg";
+      const MCPHA_OSC_2_IN = "mcpha_osc_2_in";
+      const MCPHA_OSC_2_IN_NEG = "mcpha_osc_2_in_neg";
+      const MCPHA_OSC_TRIG_MODE = "mcpha_osc_trig_mode";
+      const MCPHA_OSC_TRIG_SOURCE = "mcpha_osc_trig_source";
+      const MCPHA_OSC_TRIG_EDGE = "mcpha_osc_trig_edge";
+      const MCPHA_OSC_TRIG_LEVEL = "mcpha_osc_trig_level";
+      const TOAST_DELAY = 4000;
+      const WEBSOCKET_CONNECTED = 1;
+      const WEBSOCKET_CONNECTING = 2;
+      const WEBSOCKET_DISCONNECTED = 3;
+      const WEBSOCKET_ERROR = 4;
+        
+      const TIMER_FREQ = 125000000;
+      const TIME_PER_TICK = 1.0 / TIMER_FREQ;
+      const SHIFT_CODE = 56;
+      const SHIFT_CHAN = 52;
+      const MCPHA_COMMAND_RESET_TIMER = 0;
+      const MCPHA_COMMAND_RESET_HISTOGRAM = 1;
+      const MCPHA_COMMAND_RESET_OSCILLOSCOPE = 2;
+      const MCPHA_COMMAND_RESET_GENERATOR = 3;
+      const MCPHA_COMMAND_SET_SAMPLE_RATE = 4;
+      const MCPHA_COMMAND_SET_NEGATOR_MODE = 5;
+      const MCPHA_COMMAND_SET_BASELINE_MODE = 6;
+      const MCPHA_COMMAND_SET_BASELINE_LEVEL = 7;
+      const MCPHA_COMMAND_SET_PHA_DELAY = 8;
+      const MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD = 9;
+      const MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD = 10;
+      const MCPHA_COMMAND_SET_TIMER_VALUE = 11;
+      const MCPHA_COMMAND_SET_TIMER_MODE = 12;
+      const MCPHA_COMMAND_READ_TIMER = 13;
+      const MCPHA_COMMAND_READ_HISTOGRAM_DATA = 14;
+      const MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER = 19;
+      const MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE = 20;
+      const MCPHA_COMMAND_START_OSCILLOSCOPE = 21;
+      const MCPHA_COMMAND_READ_OSCILLOSCOPE_STATUS = 22;
+      const MCPHA_COMMAND_READ_OSCILLOSCOPE_DATA = 23;
+
+
+
+      // Returns a function, that, as long as it continues to be invoked, will not
+      // be triggered. The function will be called after it stops being called for
+      // N milliseconds. If `immediate` is passed, trigger the function on the
+      // leading edge, instead of the trailing.
+      function debounce(func, wait, immediate) {
+        var timeout;
+        return function() {
+          var context = this, args = arguments;
+          var later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+          };
+          var callNow = immediate && !timeout;
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+          if (callNow) func.apply(context, args);
+        };
+      };
+
+      $(function () {
+        // websocket connection object
+        var wsock = null;
+        
+        // queue
+        var wsqueue = [];
+        
+        // Device connection status
+        var devstatus = WEBSOCKET_DISCONNECTED;;
+      
+        // MCA chartist and options
+        var chart, mca1_data, mca1_options, mca2_options, osc_options;
+        
+        // window resized handler
+        var resize_handler = debounce(function() {
+          resize_chart_div();
+        }, 400);
+
+
+        //
+        // Resize div element that chart is bound to
+        //
+        function resize_chart_div() {
+          // resize mca chart to fill div
+          var lpad = parseInt($("#mca-chart").css("padding-left"), 10);
+          var rpad = parseInt($("#mca-chart").css("padding-right"), 10);
+          var tpad = parseInt($("#mca-chart").css("padding-top"), 10);
+          var bpad = parseInt($("#mca-chart").css("padding-bottom"), 10);
+          var w = Math.floor($("#slide-body").width())-(lpad+rpad); // less padding
+          var h = Math.floor($("#slide-body").height())-(tpad+bpad); // less padding
+          // regenerate the chart
+          $("#mca-chart").width(w);
+          $("#mca-chart").height(h);
+          chart = $.plot("#mca-chart", [[0, 3], [4, 8], [8, 5], [9, 13]], mca1_options);
+        }
+        
+        //
+        // Return a text string representing the device connection status
+        //
+        function devstatus_string(code) {
+          return (code === WEBSOCKET_DISCONNECTED) ? "is disconnected" :
+                 (code === WEBSOCKET_CONNECTING) ? "is connecting" :
+                 (code === WEBSOCKET_CONNECTED) ? "is connected" :
+                 (code === WEBSOCKET_ERROR) ? "connection error" :
+                  "unknown";
+        }
+        
+        //
+        // Initialise device connection status indicator
+        //
+        function update_device_connection_indicator(code) {
+          devstatus = code;
+          // update the connection icon
+          if (devstatus === WEBSOCKET_CONNECTING) {
+            $("#"+DEVICE_CONNECTION).text("signal_cellular_null");
+            $("#"+DEVICE_CONNECTION).css("color", "orange");
+          } else if (devstatus === WEBSOCKET_CONNECTED) {
+            $("#"+DEVICE_CONNECTION).text("signal_cellular_4_bar");
+            $("#"+DEVICE_CONNECTION).css("color", "white");
+          } else if (devstatus === WEBSOCKET_DISCONNECTED) {
+            $("#"+DEVICE_CONNECTION).text("signal_cellular_null");
+            $("#"+DEVICE_CONNECTION).css("color", "white");
+          } else if (devstatus === WEBSOCKET_ERROR) {
+            $("#"+DEVICE_CONNECTION).text("signal_cellular_connected_no_internet_4_bar");
+            $("#"+DEVICE_CONNECTION).css("color", "deep orange");
+          }
+          // update the tooltip
+          var p = localStorage.getItem(MCPHA_DEVICE_ADDR);
+          $("#"+DEVICE_CONNECTION).prop("title", "Device " +
+                  devstatus_string(devstatus) +
+                  " (" + ((p !== null && p !== 'undefined') ? p : "0.0.0.0") +
+                  ")");
+        }
+
+        function init_websocket() {
+          update_device_connection_indicator(WEBSOCKET_CONNECTING);
+          var ws = new WebSocket("ws://localhost:8080/mcpha", "echo-protocol");
+          ws.binaryType = 'arraybuffer'; // default is 'blob'
+
+          ws.onopen = function() {
+            log_status_message('Websocket connection established.', true);
+            update_device_connection_indicator(WEBSOCKET_CONNECTED);
+            // initialise device state
+            //mcphaSetSampleRate(4L);
+            mcpha_send(MCPHA_COMMAND_SET_SAMPLE_RATE, 0, 4);
+            //mcphaSetPhaDelay(0L, 100L);
+            //mcphaSetPhaMinThreshold(0L, 300L);
+            //mcphaSetPhaMaxThreshold(0L, 16300L);
+            //mcphaSetNegatorMode(0L, 0L);
+            //mcphaSetNegatorMode(1L, 0L);
+            //getHistogramData(user, 0);
+
+//            sessionStorage.echoServer = url;
+          };
+
+          ws.onclose = function() {
+            // if devstatus is not WEBSOCKET_ERROR
+            // then we log the closed connection
+            if (devstatus !== WEBSOCKET_ERROR) {
+              log_status_message('Websocket connection closed.', true);
+              devstatus = WEBSOCKET_DISCONNECTED;
+            }
+          };
+          
+          ws.onmessage = function(e) {
+            if (e.data instanceof Blob) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                console.log('received blob: ' + new Uint8Array(e.target.result).toString(16));
+              };
+              reader.readAsArrayBuffer(e.data);
+            } else if (e.data instanceof ArrayBuffer) {
+              console.log('received array buffer: ' + new Uint8Array(e.data).toString(16));
+            } else {
+              console.log('received: ' + e.data);
+            }
+            // remove command response handler
+            var f = wsqueue.shift();
+            (f)(e.data);
+          };
+
+          ws.onerror = function() {
+            update_device_connection_indicator(WEBSOCKET_ERROR);
+            log_status_message('Websocket error', true)
+          };
+/**
+
+          ws.onmessage = function(e) {
+              if (e.data instanceof Blob) {
+                  var reader = new FileReader();
+                  reader.onload = function(e) {
+                      log('received blob: ' + encodeHexString(new Uint8Array(e.target.result)));
+                  };
+                  reader.readAsArrayBuffer(e.data);
+              } else if (e.data instanceof ArrayBuffer) {
+                  log('received array buffer: ' + encodeHexString(new Uint8Array(e.data)));
+              } else {
+                  log('received: ' + e.data);
+              }
+          };
+
+          ws.onerror = function() {
+              log('error');
+          };        
+
+          ***/
+          return ws;
+        }
+
+        function closeSocket() {
+            log('closing');
+            ws.close();
+        }
+
+        function sendText() {
+            var message = document.getElementById('message').value;
+            log('sending: ' + message);
+            ws.send(message);
+        }
+
+        function sendBinary() {
+            var message = decodeHexString(document.getElementById('message').value);
+            log('sending binary: ' + encodeHexString(message));
+            ws.send(new Uint8Array(message).buffer);
+        }
+
+        //
+        // Send commands to device
+        //
+        function mcpha_send(code, chan, data, func) {
+          // register return function
+          wsqueue.push(function(payload) {
+            console.log("returned from server");
+            console.log('received array buffer: ' + new Uint8Array(payload).toString(16));
+          });
+          // send command
+          //long b = (long)(code << SHIFT_CODE) | (validateChannel(chan)  << SHIFT_CHAN) | data;
+          var buffer = new ArrayBuffer(64);
+          var uint16 = new Uint16Array(buffer);
+          var uint8 = new Uint8Array(buffer, 2, 1);
+          uint16[0] = 1237;
+          uint8[0] = 12;
+          wsock.send(buffer, {binary:true});
+        }
+
+        function show_busy_indicator(show) {
+          if (show) {
+            $('body').removeClass('loaded');
+          } else {
+            $('body').addClass('loaded');
+          }
+        }
+
+        function show_sidebar(show) {
+          if (show) {
+            $('#slide-menu').addClass('open-side-nav');
+            $('#slide-body').addClass('open-body-nav');
+          } else {
+            $('#slide-menu').removeClass('open-side-nav');
+            $('#slide-body').removeClass('open-body-nav');
+          }
+        }
+
+        //
+        // Toggle sidebar
+        //
+        function toggle_sidebar() {
+          $('#slide-menu').toggleClass('open-side-nav');
+          $('#slide-body').toggleClass('open-body-nav');
+
+          // save sidebar open state
+          if ($('#slide-menu').hasClass('open-side-nav')) {
+            localStorage.setItem(MCPHA_SIDEBAR_OPEN, 'true');
+          } else {
+            localStorage.removeItem(MCPHA_SIDEBAR_OPEN);
+          }
+
+          // HACK to resize chart div
+          setTimeout(function() {
+              resize_chart_div();
+            }, 120);
+          };
+
+        //
+        // Select div contaijner based on tab selection
+        //
+        function select_tab(tab) {
+          if (tab === "mca-1" || tab === null) {
+            // unhide sidebar
+            $('#mca-1-sidebar').css('display', 'inline');
+            $('#mca-2-sidebar').css('display', 'none');
+            $('#osc-sidebar').css('display', 'none');
+            $('#log-sidebar').css('display', 'none');
+            // show relevant container
+            $('#mca-toolbar').css('display', 'inline');
+            $('#mca-container').css('display', 'inline');
+            $('#osc-container').css('display', 'none');
+            $('#log-container').css('display', 'none');
+          } else if (tab === "mca-2") {
+            // unhide sidebar
+            $('#mca-1-sidebar').css('display', 'none');
+            $('#mca-2-sidebar').css('display', 'inline');
+            $('#osc-sidebar').css('display', 'none');
+            $('#log-sidebar').css('display', 'none');
+            // show relevant container
+            $('#mca-toolbar').css('display', 'inline');
+            $('#mca-container').css('display', 'inline');
+            $('#osc-container').css('display', 'none');
+            $('#log-container').css('display', 'none');
+          } else if (tab === "osc") {
+            // unhide sidebar
+            $('#mca-1-sidebar').css('display', 'none');
+            $('#mca-2-sidebar').css('display', 'none');
+            $('#osc-sidebar').css('display', 'inline');
+            $('#log-sidebar').css('display', 'none');
+            // show relevant container
+            $('#mca-toolbar').css('display', 'none');
+            $('#mca-container').css('display', 'none');
+            $('#osc-container').css('display', 'inline');
+            $('#log-container').css('display', 'none');
+          } else if (tab === "log") {
+            // unhide sidebar
+            $('#mca-1-sidebar').css('display', 'none');
+            $('#mca-2-sidebar').css('display', 'none');
+            $('#osc-sidebar').css('display', 'none');
+            $('#log-sidebar').css('display', 'inline');
+            // show relevant container
+            $('#mca-toolbar').css('display', 'none');
+            $('#mca-container').css('display', 'none');
+            $('#osc-container').css('display', 'none');
+            $('#log-container').css('display', 'inline');
+          }
+        }
+
+        //
+        // Initialise sidebar
+        //
+        function init_sidebar() {
+          // hide all sidebars
+          $('#mca-1-sidebar').css('display', 'none');
+          $('#mca-2-sidebar').css('display', 'none');
+          $('#osc-sidebar').css('display', 'none');
+          $('#log-sidebar').css('display', 'none');
+
+          //
+          // Install tab click handler to show/hide sidebar menu
+          //
+          $('#mca-1').on('click', function () {
+            // save this as the current selected tab
+            localStorage.setItem(MCPHA_SELECTED_TAB, 'mca-1');
+            select_tab("mca-1");
+          });
+          $('#mca-2').on('click', function () {
+            // save this as the current selected tab
+            localStorage.setItem(MCPHA_SELECTED_TAB, 'mca-2');
+            select_tab("mca-2");
+          });
+          $('#osc').on('click', function () {
+            // save this as the current selected tab
+            localStorage.setItem(MCPHA_SELECTED_TAB, 'osc');
+            select_tab("osc");
+          });
+          $('#log').on('click', function () {
+            // save this as the current selected tab
+            localStorage.setItem(MCPHA_SELECTED_TAB, 'log');
+            select_tab("log");
+          });
+
+          // restore sidebar if it last was open
+          var p = localStorage.getItem(MCPHA_SIDEBAR_OPEN);
+          show_sidebar(p !== null);
+        }
+
+        //
+        // log messages to screen and message log
+        //
+        function log_status_message(msg, onscreen) {
+          if (onscreen !== 'undefined' && onscreen !== null && onscreen) {
+            Materialize.toast(msg, TOAST_DELAY);
+          }
+        }
+
+        //
+        // install settings update handlers
+        //
+        function init_settings_handlers() {
+          var s;
+          // Device address
+          $('#'+MCPHA_DEVICE_ADDR).on('input', function(e) {
+            localStorage.setItem(MCPHA_DEVICE_ADDR, $('#'+MCPHA_DEVICE_ADDR).val());
+          });
+          s = localStorage.getItem(MCPHA_DEVICE_ADDR);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_DEVICE_ADDR).val(s);
+          } else {
+            localStorage.setItem(MCPHA_DEVICE_ADDR, $('#'+MCPHA_DEVICE_ADDR).val());
+          }
+          
+          // Connect device
+          $('#'+MCPHA_CONNECT_DEVICE).on('click', function(e) {
+            var on = $('#'+MCPHA_CONNECT_DEVICE).prop('checked');
+            localStorage.setItem(MCPHA_CONNECT_DEVICE, on ? "on" : "off");
+            if (on) {
+              connect_to_device();
+            } else {
+              disconnect_from_device();
+            }
+          });
+          s = localStorage.getItem(MCPHA_CONNECT_DEVICE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_CONNECT_DEVICE).prop('checked', s === "on");
+          } else {
+            localStorage.setItem(MCPHA_CONNECT_DEVICE,  $('#'+MCPHA_CONNECT_DEVICE).prop('checked') ? "on" : "off");
+          }
+          
+          // Decimation factor (between 4 and 8192)
+          $('#'+MCPHA_DEC_FACTOR).on('input', function(e) {
+            // TODO: ensure number is between 4 and 8192 in increments of 4
+            localStorage.setItem(MCPHA_DEC_FACTOR, $('#'+MCPHA_DEC_FACTOR).val());
+          });
+          s = localStorage.getItem(MCPHA_DEC_FACTOR);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_DEC_FACTOR).val(s);
+          } else {
+            localStorage.setItem(MCPHA_DEC_FACTOR, $('#'+MCPHA_DEC_FACTOR).val());
+          }
+          
+          // MCA 1 input negative
+          $('#'+MCPHA_MCA_1_IN_NEG).on('click', function(e) {
+            localStorage.setItem(MCPHA_MCA_1_IN_NEG, $('#'+MCPHA_MCA_1_IN_NEG).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_MCA_1_IN_NEG);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_1_IN_NEG).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_MCA_1_IN_NEG, $('#'+MCPHA_MCA_1_IN_NEG).prop('checked') ? "true" : "false");
+          }
+          
+          // MCA 1 acquisition time (seconds)
+          $('#'+MCPHA_MCA_1_ACQ_TIME).on('input', function(e) {
+            localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#'+MCPHA_MCA_1_ACQ_TIME).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_1_ACQ_TIME);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_1_ACQ_TIME).val(s);
+          } else {
+            localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#'+MCPHA_MCA_1_ACQ_TIME).val());
+          }
+          
+          // MCA 1 trigger mode (normal or automatic)
+          $('#'+MCPHA_MCA_1_TRIG_MODE).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_MODE, $('#'+MCPHA_MCA_1_TRIG_MODE).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_1_TRIG_MODE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_1_TRIG_MODE).val(s);
+            $('#'+MCPHA_MCA_1_TRIG_MODE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_MODE, $('#'+MCPHA_MCA_1_TRIG_MODE).val());
+          }
+          
+          // MCA 1 trigger source (channel 1 or channel 2)
+          $('#'+MCPHA_MCA_1_TRIG_SOURCE).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_SOURCE, $('#'+MCPHA_MCA_1_TRIG_SOURCE).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_1_TRIG_SOURCE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_1_TRIG_SOURCE).val(s);
+            $('#'+MCPHA_MCA_1_TRIG_SOURCE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_SOURCE, $('#'+MCPHA_MCA_1_TRIG_SOURCE).val());
+          }
+          
+          // MCA 1 trigger edge (rising or falling)
+          $('#'+MCPHA_MCA_1_TRIG_EDGE).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_EDGE, $('#'+MCPHA_MCA_1_TRIG_EDGE).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_1_TRIG_EDGE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_1_TRIG_EDGE).val(s);
+            $('#'+MCPHA_MCA_1_TRIG_EDGE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_EDGE, $('#'+MCPHA_MCA_1_TRIG_EDGE).val());
+          }
+          
+          // MCA 1 Trigger level
+          $('#'+MCPHA_MCA_1_TRIG_LEVEL).on('input', function(e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_LEVEL, $('#'+MCPHA_MCA_1_TRIG_LEVEL).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_1_TRIG_LEVEL);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_1_TRIG_LEVEL).val(s);
+          } else {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_LEVEL, $('#'+MCPHA_MCA_1_TRIG_LEVEL).val());
+          }
+          
+          // MCA 2 input negative
+          $('#'+MCPHA_MCA_2_IN_NEG).on('click', function(e) {
+            localStorage.setItem(MCPHA_MCA_2_IN_NEG, $('#'+MCPHA_MCA_2_IN_NEG).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_MCA_2_IN_NEG);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_2_IN_NEG).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_MCA_2_IN_NEG, $('#'+MCPHA_MCA_2_IN_NEG).prop('checked') ? "true" : "false");
+          }
+          
+          // MCA 2 acquisition time (seconds)
+          $('#'+MCPHA_MCA_2_ACQ_TIME).on('input', function(e) {
+            localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#'+MCPHA_MCA_2_ACQ_TIME).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_2_ACQ_TIME);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_2_ACQ_TIME).val(s);
+          } else {
+            localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#'+MCPHA_MCA_2_ACQ_TIME).val());
+          }
+          
+          // MCA 2 trigger mode (normal or automatic)
+          $('#'+MCPHA_MCA_2_TRIG_MODE).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_MODE, $('#'+MCPHA_MCA_2_TRIG_MODE).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_2_TRIG_MODE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_2_TRIG_MODE).val(s);
+            $('#'+MCPHA_MCA_2_TRIG_MODE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_MODE, $('#'+MCPHA_MCA_2_TRIG_MODE).val());
+          }
+          
+          // MCA 2 trigger source (channel 1 or channel 2)
+          $('#'+MCPHA_MCA_2_TRIG_SOURCE).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_SOURCE, $('#'+MCPHA_MCA_2_TRIG_SOURCE).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_2_TRIG_SOURCE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_2_TRIG_SOURCE).val(s);
+            $('#'+MCPHA_MCA_2_TRIG_SOURCE).material_select();
+          } else {
+           localStorage.setItem(MCPHA_MCA_2_TRIG_SOURCE, $('#'+MCPHA_MCA_2_TRIG_SOURCE).val());
+          }
+          
+          // MCA 2 trigger edge (rising or falling)
+          $('#'+MCPHA_MCA_2_TRIG_EDGE).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_EDGE, $('#'+MCPHA_MCA_2_TRIG_EDGE).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_2_TRIG_EDGE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_2_TRIG_EDGE).val(s);
+            $('#'+MCPHA_MCA_2_TRIG_EDGE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_EDGE, $('#'+MCPHA_MCA_2_TRIG_EDGE).val());
+          }
+          
+          // MCA 2 Trigger level
+          $('#'+MCPHA_MCA_2_TRIG_LEVEL).on('input', function(e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_LEVEL, $('#'+MCPHA_MCA_2_TRIG_LEVEL).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_2_TRIG_LEVEL);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_2_TRIG_LEVEL).val(s);
+          } else {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_LEVEL, $('#'+MCPHA_MCA_2_TRIG_LEVEL).val());
+          }
+          
+          // Oscilloscope channel 1 input
+          $('#'+MCPHA_OSC_1_IN).on('click', function(e) {
+            localStorage.setItem(MCPHA_OSC_1_IN, $('#'+MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_OSC_1_IN);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_1_IN).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_OSC_1_IN, $('#'+MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
+          }
+          
+          // Oscilloscope channel 1 input negative
+          $('#'+MCPHA_OSC_1_IN_NEG).on('click', function(e) {
+            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#'+MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_OSC_1_IN_NEG);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_1_IN_NEG).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#'+MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
+          }
+          
+          // Oscilloscope channel 2 input
+          $('#'+MCPHA_OSC_2_IN).on('click', function(e) {
+            localStorage.setItem(MCPHA_OSC_2_IN, $('#'+MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_OSC_2_IN);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_2_IN).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_OSC_2_IN, $('#'+MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
+          }
+          
+          // Oscilloscope channel 2 input negative
+          $('#'+MCPHA_OSC_2_IN_NEG).on('click', function(e) {
+            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#'+MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_OSC_2_IN_NEG);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_2_IN_NEG).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#'+MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
+          }
+          
+          // Oscilloscope trigger mode (normal or automatic)
+          $('#'+MCPHA_OSC_TRIG_MODE).on('change', function(e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_MODE, $('#'+MCPHA_OSC_TRIG_MODE).val());
+          });
+          s = localStorage.getItem(MCPHA_OSC_TRIG_MODE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_TRIG_MODE).val(s);
+            $('#'+MCPHA_OSC_TRIG_MODE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_OSC_TRIG_MODE, $('#'+MCPHA_OSC_TRIG_MODE).val());
+          }
+          
+          // Oscilloscope trigger source (channel 1 or channel 2)
+          $('#'+MCPHA_OSC_TRIG_SOURCE).on('change', function(e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_SOURCE, $('#'+MCPHA_OSC_TRIG_SOURCE).val());
+          });
+          s = localStorage.getItem(MCPHA_OSC_TRIG_SOURCE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_TRIG_SOURCE).val(s);
+            $('#'+MCPHA_OSC_TRIG_SOURCE).material_select();
+          } else {
+           localStorage.setItem(MCPHA_OSC_TRIG_SOURCE, $('#'+MCPHA_OSC_TRIG_SOURCE).val());
+          }
+          
+          // Oscilloscope trigger edge (rising or falling)
+          $('#'+MCPHA_OSC_TRIG_EDGE).on('change', function(e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_EDGE, $('#'+MCPHA_OSC_TRIG_EDGE).val());
+          });
+          s = localStorage.getItem(MCPHA_OSC_TRIG_EDGE);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_TRIG_EDGE).val(s);
+            $('#'+MCPHA_OSC_TRIG_EDGE).material_select();
+          } else {
+            localStorage.setItem(MCPHA_OSC_TRIG_EDGE, $('#'+MCPHA_OSC_TRIG_EDGE).val());
+          }
+          
+          // Oscilloscope trigger level
+          $('#'+MCPHA_OSC_TRIG_LEVEL).on('input', function(e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_LEVEL, $('#'+MCPHA_OSC_TRIG_LEVEL).val());
+          });
+          s = localStorage.getItem(MCPHA_OSC_TRIG_LEVEL);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_OSC_TRIG_LEVEL).val(s);
+          } else {
+            localStorage.setItem(MCPHA_OSC_TRIG_LEVEL, $('#'+MCPHA_OSC_TRIG_LEVEL).val());
+          }
+        }
+
+        function init_tabs() {
+          select_tab(localStorage.getItem(MCPHA_SELECTED_TAB));
+        }
+        
+        // initialise device connection status indicator
+        update_device_connection_indicator(WEBSOCKET_DISCONNECTED);
+
+        // install settings update handlers
+        init_settings_handlers();
+
+        //
+        // Install sidebar menu click handler to show/hide sidebar menu
+        //
+        $('#sidebar').on('click', function () {
+          toggle_sidebar();
+        });
+
+        $('select').material_select();
+
+        // initialise sidebar
+        init_sidebar();
+
+        // initialise tabs
+        init_tabs();
+        
+        // hide busy indicator
+        show_busy_indicator(false);
+
+        var on = $('#'+MCPHA_CONNECT_DEVICE).prop('checked');
+        if (on) {
+          if (wsock === null) {
+            wsock = init_websocket();
+          }
+        }
+        
+        mca1_options = {
+          lines: {
+            show: true,
+            steps: true
+          },
+          points: {
+            show: false
+          },
+          xaxis: {
+            panRange: false,
+            tickDecimals: 0,
+            tickSize: 1000,
+            min: 0,
+            max: 16384,
+            transform: function(x) {
+              return x;
+            }
+          },
+          yaxis: {
+            panRange: false,
+            labelWidth: 140,
+            reserveSpace: true,
+            position: "right",
+            max: 100,
+            min: 0,
+            ticks: null,//[0.1,1,10,100,1000],
+            transform:  null//function(v) {
+            //  return Math.log(v+0.0001); /*move away from zero*/
+            //},
+            //tickDecimals: 3,
+            //tickFormatter: function (v, axis) {
+            //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
+            //}
+          },
+          grid: {
+            backgroundColor: "#999",
+            hoverable: true,
+            clickable: true,
+            autoHighlight: false
+          },
+          crosshair: {
+            mode: "x"
+          },
+          zoom: {
+            interactive: true
+          },
+          pan: {
+            interactive: false
+          },
+          selection: {
+            mode: "x"
+          }
+        };
+        
+        chart = $.plot("#mca-chart", [[0, 3], [4, 8], [8, 5], [9, 13]], mca1_options);
+
+
+
+        // install browser window resize handler
+        window.addEventListener('resize', resize_handler);
+        // resize chart to fit browser window
+        resize_chart_div();
+        
+        // ok ready now
+        log_status_message("Ready", true);
+      });
+    </script>
+
+    <!-- Start of busy indicator section -->
+    <div id="loader-wrapper">
+      <div id="loader"></div>
+      <div class="loader-section section-left"></div>
+      <div class="loader-section section-right"></div>
+    </div>
+    <!-- End of busy indicator section -->
+
+    <header>
+      <nav>
+        <div class="nav-wrapper brown darken-2">
+          <a id="sidebar" href="#"><i class="left large material-icons">menu</i></a>
+          <div class="center brand-logo">MCPHA Client</div>
+          <ul class="right hide-on-med-and-down">
+            <li><a  id="mca-1" class="waves-effect waves-light btn orange lighten-4">MCA 1</a></li>
+            <li><a id="mca-2" class="waves-effect waves-light btn orange lighten-4">MCA 2</a></li>
+            <li><a id="osc" class="waves-effect waves-light btn orange lighten-4">Oscilloscope</a></li>
+            <li><a id="log" class="waves-effect waves-light btn orange lighten-4">Log</a></li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <div class="root-container">
+        <div id="mca-toolbar" class="fixed-action-btn horizontal click-to-toggle" style="position:absolute;top:10px;right:24px;">
+          <a class="btn-floating btn-large red"><i class="material-icons">more_vert</i></a>
+          <ul style="width: 800px;">
+            <li><a class="btn-floating green" title="Set ROI #1"><i class="material-icons">looks_one</i></a></li>
+            <li><a class="btn-floating green" title="Set ROI #2"><i class="material-icons">looks_two</i></a></li>
+            <li><a class="btn-floating green" title="Set ROI #3"><i class="material-icons">looks_3</i></a></li>
+            <li class="divider"></li>
+            <li><a class="btn-floating yellow darken-1"><i class="material-icons">aspect_ratio</i></a></li>
+            <li><a class="btn-floating green"><i class="material-icons">zoom_in</i></a></li>
+            <li><a class="btn-floating green"><i class="material-icons">zoom_out</i></a></li>
+            <li><a class="btn-floating green"><i class="material-icons">pan_tool</i></a></li>
+            <li class="divider"></li>
+            <li><a class="btn-floating green"><i class="material-icons">timeline</i></a></li>
+            <li><a class="btn-floating green"><i class="material-icons">timeline</i></a></li>
+          </ul>
+        </div>
+        <div id="slide-menu" class="side-nav">
+          <h5>General Settings</h5>
+          <form>
+            <div class="valign-wrapper">
+              <div class="s6 input-field">
+                <label>Device IP Address</label>
+                <input type="text" id="mcpha_device_addr" value="0.0.0.0">
+              </div>
+              <div class="switch s6">
+                <label class="right valign">
+                  <input type="checkbox" id="mcpha_connect_device">
+                  <span class="lever"></span>
+                </label>
+              </div>
+            </div>
+            <div class="input-field">
+              <label>Decimation Factor</label>
+              <input type="number" step="4" id="mcpha_dec_factor" value="4">
+            </div>
+          </form>
+          <div id="mca-1-sidebar">
+            <h5>MCA 1 Settings</h5>
+            <form action="#">
+              <div class="switch">
+                <label class="left">Negative Input</label>
+                <label class="right">
+                  <input type="checkbox" id="mcpha_mca_1_in_neg" checked="checked">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <br/>
+              <div class="input-field">
+                <label>Acquisition Time (seconds)</label>
+                <input type="number" step="1" id="mcpha_mca_1_acq_time" value="60">
+              </div>
+              <div class="input-field">
+                <select id="mcpha_mca_1_trig_mode">
+                  <option selected value="n">Normal</option>
+                  <option value="a">Automatic</option>
+                </select>
+                <label>Trigger Mode</label>
+              </div>
+              <div class="input-field">
+                <select id="mcpha_mca_1_trig_source">
+                  <option selected value="1">Channel 1</option>
+                  <option value="2">Channel 2</option>
+                </select>
+                <label>Trigger Source</label>
+              </div>
+              <div class="input-field">
+                <select id="mcpha_mca_1_trig_edge">
+                  <option selected value="r">Rising  _/¯</option>
+                  <option value="f">Falling  ¯\_</option>
+                </select>
+                <label>Trigger Edge</label>
+              </div>
+              <div class="input-field">
+                <label>Trigger Level</label>
+                <input type="number" id="mcpha_mca_1_trig_level" step="5" value="200">
+              </div>
+            </form>
+          </div>
+          <div id="mca-2-sidebar">
+            <h5>MCA 2 Settings</h5>
+            <form action="#">
+              <div class="switch">
+                <label class="left">Negative Input</label>
+                <label class="right">
+                  <input type="checkbox" id="mcpha_mca_2_in_neg" checked="checked">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <br/>
+              <div class="input-field">
+                <label>Acquisition Time (seconds)</label>
+                <input type="number" step="1" id="mcpha_mca_2_acq_time" value="60">
+              </div>
+              <div class="input-field">
+                <select id="mcpha_mca_2_trig_mode">
+                  <option selected value="n">Normal</option>
+                  <option value="a">Automatic</option>
+                </select>
+                <label>Trigger Mode</label>
+              </div>
+              <div class="input-field">
+                <select id="mcpha_mca_2_trig_source">
+                  <option value="1">Channel 1</option>
+                  <option selected value="2">Channel 2</option>
+                </select>
+                <label>Trigger Source</label>
+              </div>
+              <div class="input-field">
+                <select id="mcpha_mca_2_trig_edge">
+                  <option selected value="r">Rising  _/¯</option>
+                  <option value="f">Falling  ¯\_</option>
+                </select>
+                <label>Trigger Edge</label>
+              </div>
+              <div class="input-field">
+                <label>Trigger Level</label>
+                <input type="number" id="mcpha_mca_2_trig_level" step="5" value="200">
+              </div>
+            </form>
+          </div>
+          <div id="osc-sidebar">
+            <h5>Oscilloscope Settings</h5>
+            <form action="#">
+              <div class="switch switch-row-spacing">
+                <label class="left">Channel 1</label>
+                <label class="right">
+                  <input type="checkbox" id="mcpha_osc_1_in" checked="checked">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <br/>
+              <div class="switch">
+                <label class="left">Channel 1 Negative Input</label>
+                <label class="right">
+                  <input type="checkbox" id="mcpha_osc_1_in_neg" checked="checked">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <br/><br/>
+              <div class="switch switch-row-spacing">
+                <label class="left">Channel 2</label>
+                <label class="right">
+                  <input type="checkbox" id="mcpha_osc_2_in" checked="checked">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <br/>
+              <div class="switch">
+                <label class="left">Channel 2 Negative Input</label>
+                <label class="right">
+                  <input type="checkbox" id="mcpha_osc_2_in_neg" checked="checked">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <br/><br/>
+              <div class="input-field">
+                <select id="mcpha_osc_trig_mode">
+                  <option selected value="n">Normal</option>
+                  <option value="a">Automatic</option>
+                </select>
+                <label>Trigger Mode</label>
+              </div>
+              <div class="input-field">
+                <select id="mcpha_osc_trig_source">
+                  <option selected value="1">Channel 1</option>
+                  <option value="2">Channel 2</option>
+                </select>
+                <label>Trigger Source</label>
+              </div>
+              <div class="input-field">
+                <select id="mcpha_osc_trig_edge">
+                  <option selected value="r">Rising  _/¯</option>
+                  <option value="f">Falling  ¯\_</option>
+                </select>
+                <label>Trigger Edge</label>
+              </div>
+              <div class="input-field">
+                <label>Trigger Level</label>
+                <input type="number" id="mcpha_osc_trig_level" step="5" value="200">
+              </div>
+            </form>
+          </div>
+          <div id="log-sidebar">
+            <h5>Log Settings</h5>
+            <form action="#">
+            </form>
+          </div>
+        </div>
+        <div id="slide-body" class="side-body">
+          <div id="mca-container">
+            <div id="mca-chart"></div>
+          </div>
+          <div id="osc-container">
+            OSCILLOSCOPE
+          </div>
+          <div id="log-container">
+            LOG
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="page-footer brown darken-2">
+      <div>
+        <div class="right">
+          <div class="net-traffic" title="Network traffic."><i class="small material-icons">swap_horiz</i></div>
+          <div class="device-connection"><i id="device-connection" class="small material-icons">signal_cellular_null</i></div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
