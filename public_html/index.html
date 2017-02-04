@@ -277,28 +277,31 @@ limitations under the License.
 
           ws.onerror = function() {
             update_device_connection_indicator(WEBSOCKET_ERROR);
-            log_status_message('Websocket error', true)
+            log_status_message('Websocket error', true);
+            // set connection button state
+            localStorage.setItem(MCPHA_CONNECT_DEVICE, "off");
+            $('#'+MCPHA_CONNECT_DEVICE).prop('checked', false);
           };
 
           return ws;
         }
 
-        function closeSocket() {
-            log('closing');
-            ws.close();
-        }
+//        function closeSocket() {
+//            log('closing');
+//            ws.close();
+//        }
 
-        function sendText() {
-            var message = document.getElementById('message').value;
-            log('sending: ' + message);
-            ws.send(message);
-        }
+//        function sendText() {
+//            var message = document.getElementById('message').value;
+//            log('sending: ' + message);
+//            ws.send(message);
+//        }
 
-        function sendBinary() {
-            var message = decodeHexString(document.getElementById('message').value);
-            log('sending binary: ' + encodeHexString(message));
-            ws.send(new Uint8Array(message).buffer);
-        }
+//        function sendBinary() {
+//            var message = decodeHexString(document.getElementById('message').value);
+//            log('sending binary: ' + encodeHexString(message));
+//            ws.send(new Uint8Array(message).buffer);
+//        }
 
         //
         // Send commands to device
@@ -373,6 +376,11 @@ limitations under the License.
             $('#mca-container').css('display', 'inline');
             $('#osc-container').css('display', 'none');
             $('#log-container').css('display', 'none');
+            // show tab selection bar
+            $('#mca-1').addClass("selectedtab");
+            $('#mca-2').removeClass("selectedtab");
+            $('#osc').removeClass("selectedtab");
+            $('#log').removeClass("selectedtab");
           } else if (tab === "mca-2") {
             // unhide sidebar
             $('#mca-1-sidebar').css('display', 'none');
@@ -384,6 +392,11 @@ limitations under the License.
             $('#mca-container').css('display', 'inline');
             $('#osc-container').css('display', 'none');
             $('#log-container').css('display', 'none');
+            // show tab selection bar
+            $('#mca-1').removeClass("selectedtab");
+            $('#mca-2').addClass("selectedtab");
+            $('#osc').removeClass("selectedtab");
+            $('#log').removeClass("selectedtab");
           } else if (tab === "osc") {
             // unhide sidebar
             $('#mca-1-sidebar').css('display', 'none');
@@ -395,6 +408,11 @@ limitations under the License.
             $('#mca-container').css('display', 'none');
             $('#osc-container').css('display', 'inline');
             $('#log-container').css('display', 'none');
+            // show tab selection bar
+            $('#mca-1').removeClass("selectedtab");
+            $('#mca-2').removeClass("selectedtab");
+            $('#osc').addClass("selectedtab");
+            $('#log').removeClass("selectedtab");
           } else if (tab === "log") {
             // unhide sidebar
             $('#mca-1-sidebar').css('display', 'none');
@@ -406,6 +424,11 @@ limitations under the License.
             $('#mca-container').css('display', 'none');
             $('#osc-container').css('display', 'none');
             $('#log-container').css('display', 'inline');
+            // show tab selection bar
+            $('#mca-1').removeClass("selectedtab");
+            $('#mca-2').removeClass("selectedtab");
+            $('#osc').removeClass("selectedtab");
+            $('#log').addClass("selectedtab");
           }
         }
 
@@ -843,7 +866,7 @@ limitations under the License.
           <a id="sidebar" href="#"><i class="left large material-icons">menu</i></a>
           <div class="center brand-logo">MCPHA Client</div>
           <ul class="right hide-on-med-and-down">
-            <li><a  id="mca-1" class="waves-effect waves-light btn orange lighten-4">MCA 1</a></li>
+            <li><a  id="mca-1" class="waves-effect waves-light btn orange lighten-4 selectedtab">MCA 1</a></li>
             <li><a id="mca-2" class="waves-effect waves-light btn orange lighten-4">MCA 2</a></li>
             <li><a id="osc" class="waves-effect waves-light btn orange lighten-4">Oscilloscope</a></li>
             <li><a id="log" class="waves-effect waves-light btn orange lighten-4">Log</a></li>
