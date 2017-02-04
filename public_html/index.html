@@ -120,9 +120,6 @@ limitations under the License.
         // websocket connection object
         var wsock = null;
         
-        // queue
-        var wsqueue = [];
-        
         // Device connection status
         var devstatus = WEBSOCKET_DISCONNECTED;;
       
@@ -190,9 +187,18 @@ limitations under the License.
                   ")");
         }
 
-        function init_websocket() {
+        //
+        // Initialise websocket connection
+        //
+        function init_websocket(ws) {
+          if (ws !== null && ws.readyState === 1) {
+            ws.close();
+          }
+          
           update_device_connection_indicator(WEBSOCKET_CONNECTING);
-          var ws = new WebSocket("ws://localhost:8080/mcpha", "echo-protocol");
+          
+          var wsuri = "ws://" + localStorage.getItem(MCPHA_DEVICE_ADDR);
+          ws = new WebSocket(wsuri);
           ws.binaryType = 'arraybuffer'; // default is 'blob'
 
           ws.onopen = function() {
@@ -201,7 +207,7 @@ limitations under the License.
             // initialise device state
             //mcphaSetSampleRate(4L);
             mcpha_send(MCPHA_COMMAND_SET_SAMPLE_RATE, 0, 4);
-            //mcphaSetPhaDelay(0L, 100L);
+            mcpha_send(MCPHA_COMMAND_SET_PHA_DELAY, 0, 100);
             //mcphaSetPhaMinThreshold(0L, 300L);
             //mcphaSetPhaMaxThreshold(0L, 16300L);
             //mcphaSetNegatorMode(0L, 0L);
@@ -221,47 +227,59 @@ limitations under the License.
           };
           
           ws.onmessage = function(e) {
-            if (e.data instanceof Blob) {
-              var reader = new FileReader();
-              reader.onload = function(e) {
-                console.log('received blob: ' + new Uint8Array(e.target.result).toString(16));
-              };
-              reader.readAsArrayBuffer(e.data);
-            } else if (e.data instanceof ArrayBuffer) {
-              console.log('received array buffer: ' + new Uint8Array(e.data).toString(16));
-            } else {
-              console.log('received: ' + e.data);
+            if (e.data instanceof ArrayBuffer) {
+              var r = new Uint32Array(e.data)[0];
+              if (r === 0) {
+                var data = new Uint32Array(e.data, 4);
+                var timer1 = data[1] * 4294967296 + data[0];
+                console.log("timer1: ", timer1);
+              } else if (r === 1) {
+                var data = new Uint32Array(e.data, 4);
+                var timer2 = data[1] * 4294967296 + data[0];
+                console.log("timer2: ", timer2);
+              } else if (r === 2) {
+                var data = new Uint32Array(e.data, 4);
+                console.log("hist1 length: ", data.length);
+                var hist1 = [];
+                for (let entry of data.entries()) {
+                  hist1.push(entry);
+                }
+                //$.plot($("#placeholder"), [hist1]);
+              } else if (r === 3) {
+                var data = new Uint32Array(evt.data, 4);
+                console.log("hist2 length: ", data.length);
+                var hist2 = [];
+                for (let entry of data.entries()) {
+                    hist2.push(entry);
+                }
+                //$.plot($("#placeholder"), [hist2]);
+              } else if (r === 4) {
+                var status = new Uint32Array(e.data, 4)[0];
+                console.log("status: ", status);
+              } else if (r === 5) {
+                var data = new Uint16Array(e.data, 4);
+                console.log("scope length: ", data.length);
+                var chan1 = [];
+                var chan2 = [];
+                for (let entry of data.entries()) {
+                  if (entry[0] % 2) {
+                      entry[0] /= 2;
+                      chan2.push(entry);
+                  } else {
+                      entry[0] /= 2;
+                      chan1.push(entry);
+                  }
+                }
+                //$.plot($("#placeholder"), [chan1, chan2]);
+              }
             }
-            // remove command response handler
-            var f = wsqueue.shift();
-            (f)(e.data);
           };
 
           ws.onerror = function() {
             update_device_connection_indicator(WEBSOCKET_ERROR);
             log_status_message('Websocket error', true)
           };
-/**
 
-          ws.onmessage = function(e) {
-              if (e.data instanceof Blob) {
-                  var reader = new FileReader();
-                  reader.onload = function(e) {
-                      log('received blob: ' + encodeHexString(new Uint8Array(e.target.result)));
-                  };
-                  reader.readAsArrayBuffer(e.data);
-              } else if (e.data instanceof ArrayBuffer) {
-                  log('received array buffer: ' + encodeHexString(new Uint8Array(e.data)));
-              } else {
-                  log('received: ' + e.data);
-              }
-          };
-
-          ws.onerror = function() {
-              log('error');
-          };        
-
-          ***/
           return ws;
         }
 
@@ -286,19 +304,17 @@ limitations under the License.
         // Send commands to device
         //
         function mcpha_send(code, chan, data, func) {
-          // register return function
-          wsqueue.push(function(payload) {
-            console.log("returned from server");
-            console.log('received array buffer: ' + new Uint8Array(payload).toString(16));
-          });
-          // send command
-          //long b = (long)(code << SHIFT_CODE) | (validateChannel(chan)  << SHIFT_CHAN) | data;
-          var buffer = new ArrayBuffer(64);
-          var uint16 = new Uint16Array(buffer);
-          var uint8 = new Uint8Array(buffer, 2, 1);
-          uint16[0] = 1237;
-          uint8[0] = 12;
-          wsock.send(buffer, {binary:true});
+          if (wsock !== null) {
+            // send command
+            var buffer = new ArrayBuffer(16);
+            var dataInt = new Uint32Array(buffer);
+            var dataFloat = new Float64Array(buffer, 8);
+          
+            dataInt[0] = code;
+            dataInt[1] = chan;
+            dataFloat[0] = data;
+            wsock.send(buffer, {binary:true});
+          }
         }
 
         function show_busy_indicator(show) {
@@ -343,6 +359,9 @@ limitations under the License.
         // Select div contaijner based on tab selection
         //
         function select_tab(tab) {
+          // save this as the current selected tab
+          localStorage.setItem(MCPHA_SELECTED_TAB, 'mca-1');
+          // hide unselected tabs and show selected tab
           if (tab === "mca-1" || tab === null) {
             // unhide sidebar
             $('#mca-1-sidebar').css('display', 'inline');
@@ -404,23 +423,15 @@ limitations under the License.
           // Install tab click handler to show/hide sidebar menu
           //
           $('#mca-1').on('click', function () {
-            // save this as the current selected tab
-            localStorage.setItem(MCPHA_SELECTED_TAB, 'mca-1');
             select_tab("mca-1");
           });
           $('#mca-2').on('click', function () {
-            // save this as the current selected tab
-            localStorage.setItem(MCPHA_SELECTED_TAB, 'mca-2');
             select_tab("mca-2");
           });
           $('#osc').on('click', function () {
-            // save this as the current selected tab
-            localStorage.setItem(MCPHA_SELECTED_TAB, 'osc');
             select_tab("osc");
           });
           $('#log').on('click', function () {
-            // save this as the current selected tab
-            localStorage.setItem(MCPHA_SELECTED_TAB, 'log');
             select_tab("log");
           });
 
@@ -459,9 +470,12 @@ limitations under the License.
             var on = $('#'+MCPHA_CONNECT_DEVICE).prop('checked');
             localStorage.setItem(MCPHA_CONNECT_DEVICE, on ? "on" : "off");
             if (on) {
-              connect_to_device();
+              wsock = init_websocket(wsock);
             } else {
-              disconnect_from_device();
+              if (wsock !== null && wsock.readyState === 1) {
+                wsock.close();
+              }
+              wsock = null;
             }
           });
           s = localStorage.getItem(MCPHA_CONNECT_DEVICE);
@@ -741,11 +755,10 @@ limitations under the License.
         // hide busy indicator
         show_busy_indicator(false);
 
-        var on = $('#'+MCPHA_CONNECT_DEVICE).prop('checked');
-        if (on) {
-          if (wsock === null) {
-            wsock = init_websocket();
-          }
+        // if device connection button is on then
+        // try and establish a connection now.
+        if ($('#'+MCPHA_CONNECT_DEVICE).prop('checked')) {
+          wsock = init_websocket(wsock);
         }
         
         mca1_options = {
@@ -853,8 +866,8 @@ limitations under the License.
             <li><a class="btn-floating green"><i class="material-icons">zoom_out</i></a></li>
             <li><a class="btn-floating green"><i class="material-icons">pan_tool</i></a></li>
             <li class="divider"></li>
-            <li><a class="btn-floating green"><i class="material-icons">timeline</i></a></li>
-            <li><a class="btn-floating green"><i class="material-icons">timeline</i></a></li>
+            <li><a class="btn-floating brown lighten-2" title="Log scale"><span class="badge center white-text">Log</span></a></li>
+            <li><a class="btn-floating brown lighten-2" title="Linear scale"><span class="badge center white-text">Lin</span></a></li>
           </ul>
         </div>
         <div id="slide-menu" class="side-nav">
