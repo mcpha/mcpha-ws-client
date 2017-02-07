@@ -34,7 +34,7 @@ limitations under the License.
     <script type="text/javascript" src="js/jquery.multilevelpushmenu.min.js"></script>
     <script type="text/javascript" src="js/long.js"></script>
     <script type="text/javascript" src="js/jquery.flot.min.js"></script>
-    <script type="text/javascript" src="js/attrchange.js"></script>
+    <script type="text/javascript" src="js/download.js"></script>
 
     <script type="text/javascript">
       const DEVICE_CONNECTION = "device-connection";
@@ -64,6 +64,7 @@ limitations under the License.
       const MCPHA_OSC_TRIG_SOURCE = "mcpha_osc_trig_source";
       const MCPHA_OSC_TRIG_EDGE = "mcpha_osc_trig_edge";
       const MCPHA_OSC_TRIG_LEVEL = "mcpha_osc_trig_level";
+      const MCPHA_MCA_DATA_FORMAT = "mcpha_mca_data_format";
       const TOAST_DELAY = 4000;
       const WEBSOCKET_CONNECTED = 1;
       const WEBSOCKET_CONNECTING = 2;
@@ -115,7 +116,8 @@ limitations under the License.
           if (callNow) func.apply(context, args);
         };
       };
-
+      
+      
       $(function () {
         // websocket connection object
         var wsock = null;
@@ -320,6 +322,66 @@ limitations under the License.
           }
         }
 
+        //
+        // Initial mca chart options
+        //
+        function default_mca_chart_options() {
+          return {
+            lines: {
+              show: true,
+              steps: true
+            },
+            points: {
+              show: false
+            },
+            xaxis: {
+              panRange: false,
+              tickDecimals: 0,
+              tickSize: 1000,
+              min: 0,
+              max: 16384,
+              transform: function(x) {
+                return x;
+              }
+            },
+            yaxis: {
+              panRange: false,
+              labelWidth: 140,
+              reserveSpace: true,
+              position: "right",
+              max: 100,
+              min: 0,
+              ticks: null,//[0.1,1,10,100,1000],
+              transform:  null//function(v) {
+              //  return Math.log(v+0.0001); /*move away from zero*/
+              //},
+              //tickDecimals: 3,
+              //tickFormatter: function (v, axis) {
+              //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
+              //}
+            },
+            grid: {
+              backgroundColor: "#999",
+              hoverable: true,
+              clickable: true,
+              autoHighlight: false
+            },
+            crosshair: {
+              mode: "x"
+            },
+            zoom: {
+              interactive: true
+            },
+            pan: {
+              interactive: false
+            },
+            selection: {
+              mode: "x"
+            }
+          };
+        }
+
+
         function show_busy_indicator(show) {
           if (show) {
             $('body').removeClass('loaded');
@@ -363,7 +425,7 @@ limitations under the License.
         //
         function select_tab(tab) {
           // save this as the current selected tab
-          localStorage.setItem(MCPHA_SELECTED_TAB, 'mca-1');
+          localStorage.setItem(MCPHA_SELECTED_TAB, tab);
           // hide unselected tabs and show selected tab
           if (tab === "mca-1" || tab === null) {
             // unhide sidebar
@@ -518,6 +580,18 @@ limitations under the License.
             $('#'+MCPHA_DEC_FACTOR).val(s);
           } else {
             localStorage.setItem(MCPHA_DEC_FACTOR, $('#'+MCPHA_DEC_FACTOR).val());
+          }
+          
+          // MCA data format
+          $('#'+MCPHA_MCA_DATA_FORMAT).on('change', function(e) {
+            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#'+MCPHA_MCA_DATA_FORMAT).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
+          if (s !== null && s !== 'undefined') {
+            $('#'+MCPHA_MCA_DATA_FORMAT).val(s);
+            $('#'+MCPHA_MCA_DATA_FORMAT).material_select();
+          } else {
+            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#'+MCPHA_MCA_DATA_FORMAT).val());
           }
           
           // MCA 1 input negative
@@ -750,6 +824,23 @@ limitations under the License.
           }
         }
 
+        function init_tool_handlers() {
+          $('#download').on('click', function(e) {
+            var file = null;
+            var data = null;
+            if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
+              data = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              file = "mca1-data.gif";
+            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
+              data = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              file = "mca2-data.gif";
+            }
+            if (file !== null) {
+              download(data, file);
+            }
+          });          
+        }
+        
         function init_tabs() {
           select_tab(localStorage.getItem(MCPHA_SELECTED_TAB));
         }
@@ -760,6 +851,9 @@ limitations under the License.
         // install settings update handlers
         init_settings_handlers();
 
+        // install tool handlers
+        init_tool_handlers();
+        
         //
         // Install sidebar menu click handler to show/hide sidebar menu
         //
@@ -784,63 +878,11 @@ limitations under the License.
           wsock = init_websocket(wsock);
         }
         
-        mca1_options = {
-          lines: {
-            show: true,
-            steps: true
-          },
-          points: {
-            show: false
-          },
-          xaxis: {
-            panRange: false,
-            tickDecimals: 0,
-            tickSize: 1000,
-            min: 0,
-            max: 16384,
-            transform: function(x) {
-              return x;
-            }
-          },
-          yaxis: {
-            panRange: false,
-            labelWidth: 140,
-            reserveSpace: true,
-            position: "right",
-            max: 100,
-            min: 0,
-            ticks: null,//[0.1,1,10,100,1000],
-            transform:  null//function(v) {
-            //  return Math.log(v+0.0001); /*move away from zero*/
-            //},
-            //tickDecimals: 3,
-            //tickFormatter: function (v, axis) {
-            //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
-            //}
-          },
-          grid: {
-            backgroundColor: "#999",
-            hoverable: true,
-            clickable: true,
-            autoHighlight: false
-          },
-          crosshair: {
-            mode: "x"
-          },
-          zoom: {
-            interactive: true
-          },
-          pan: {
-            interactive: false
-          },
-          selection: {
-            mode: "x"
-          }
-        };
+        mca1_options = default_mca_chart_options();
+        
+        mca2_options = default_mca_chart_options();
         
         chart = $.plot("#mca-chart", [[0, 3], [4, 8], [8, 5], [9, 13]], mca1_options);
-
-
 
         // install browser window resize handler
         window.addEventListener('resize', resize_handler);
@@ -891,6 +933,8 @@ limitations under the License.
             <li class="divider"></li>
             <li><a class="btn-floating brown lighten-2" title="Log scale"><span class="badge center white-text">Log</span></a></li>
             <li><a class="btn-floating brown lighten-2" title="Linear scale"><span class="badge center white-text">Lin</span></a></li>
+            <li class="divider"></li>
+            <li><a id="download" class="btn-floating red" title="Download data"><i class="material-icons">file_download</i></a></li>
           </ul>
         </div>
         <div id="slide-menu" class="side-nav">
@@ -908,6 +952,13 @@ limitations under the License.
                 </label>
               </div>
             </div>
+              <div class="input-field">
+                <select id="mcpha_mca_data_format">
+                  <option selected value="json-txt">Text File</option>
+                  <option value="ortec-chn">Ortec Maestro Chn</option>
+                </select>
+                <label>MCA Data Format</label>
+              </div>
             <div class="input-field">
               <label>Decimation Factor</label>
               <input type="number" step="4" id="mcpha_dec_factor" value="4">
