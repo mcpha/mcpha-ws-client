@@ -88,13 +88,13 @@ limitations under the License.
       const MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD = 10;
       const MCPHA_COMMAND_SET_TIMER_VALUE = 11;
       const MCPHA_COMMAND_SET_TIMER_MODE = 12;
-      const MCPHA_COMMAND_READ_TIMER = 13;
-      const MCPHA_COMMAND_READ_HISTOGRAM_DATA = 14;
+      const MCPHA_COMMAND_GET_TIMER = 13;
+      const MCPHA_COMMAND_GET_HISTOGRAM_DATA = 14;
       const MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER = 19;
       const MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE = 20;
       const MCPHA_COMMAND_START_OSCILLOSCOPE = 21;
-      const MCPHA_COMMAND_READ_OSCILLOSCOPE_STATUS = 22;
-      const MCPHA_COMMAND_READ_OSCILLOSCOPE_DATA = 23;
+      const MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS = 22;
+      const MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA = 23;
 
 
 
@@ -116,8 +116,37 @@ limitations under the License.
           if (callNow) func.apply(context, args);
         };
       };
+ 
+      //
+      //
+      //
+      function uint_8_to_base_64(u8Arr) {
+        var CHUNK_SIZE = 0x8000; //arbitrary number
+        var index = 0;
+        var length = u8Arr.length;
+        var result = '';
+        var slice;
+        while (index < length) {
+          slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length)); 
+          result += String.fromCharCode.apply(null, slice);
+          index += CHUNK_SIZE;
+        }
+        return btoa(result);
+      }
       
-      
+      //
+      //
+      //
+      function string_to_uint(string) {
+        var string = btoa(unescape(encodeURIComponent(string))),
+                     charList = string.split(''), uintArray = [];
+        for (var i = 0; i < charList.length; i++) {
+          uintArray.push(charList[i].charCodeAt(0));
+        }
+        return new Uint8Array(uintArray);
+      }
+  
+  
       $(function () {
         // websocket connection object
         var wsock = null;
@@ -126,7 +155,10 @@ limitations under the License.
         var devstatus = WEBSOCKET_DISCONNECTED;;
       
         // MCA chartist and options
-        var chart, mca1_data, mca1_options, mca2_options, osc_options;
+        var chart;
+        var mca1_data = [], mca1_options, mca1_cursor_mode, mca1_y_range = [[100,500,2000,10000,50000,200000,1000000],[0.1,1,10,100,1000,10000]];
+        var mca2_data = [], mca2_options, mca2_cursor_mode, mca2_y_range = [[100,500,2000,10000,50000,200000,1000000],[0.1,1,10,100,1000,10000]];
+        var osc_data = [], osc_options, osc_cursor_mode;
         
         // window resized handler
         var resize_handler = debounce(function() {
@@ -148,7 +180,12 @@ limitations under the License.
           // regenerate the chart
           $("#mca-chart").width(w);
           $("#mca-chart").height(h);
-          chart = $.plot("#mca-chart", [[0, 3], [4, 8], [8, 5], [9, 13]], mca1_options);
+      
+          update_chart();
+//          mca1_options.points.show = true;
+//          mca1_options.grid.backgroundColor = "#fff";
+//          
+//          chart = $.plot("#mca-chart", [[0, 30], [400, 80], [800, 50], [9000, 90]], mca1_options);
         }
         
         //
@@ -207,16 +244,24 @@ limitations under the License.
             log_status_message('Websocket connection established.', true);
             update_device_connection_indicator(WEBSOCKET_CONNECTED);
             // initialise device state
-            //mcphaSetSampleRate(4L);
             mcpha_send(MCPHA_COMMAND_SET_SAMPLE_RATE, 0, 4);
             mcpha_send(MCPHA_COMMAND_SET_PHA_DELAY, 0, 100);
-            //mcphaSetPhaMinThreshold(0L, 300L);
-            //mcphaSetPhaMaxThreshold(0L, 16300L);
-            //mcphaSetNegatorMode(0L, 0L);
-            //mcphaSetNegatorMode(1L, 0L);
-            //getHistogramData(user, 0);
-
-//            sessionStorage.echoServer = url;
+            mcpha_send(MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD, 0, 300);
+            mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 0, 16300);
+            // if mca mode then get histogram data
+            if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+              // set whether mca channel 1 has negative input
+              mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0,
+                         localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
+              mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 0, 0);
+            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+              // set whether mca channel 2 has negative input
+              mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1,
+                         localStorage.getItem(MCPHA_MCA_2_IN_NEG) === "true" ? 1 : 0);
+              mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 1, 0);
+            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
+              
+            }
           };
 
           ws.onclose = function() {
@@ -242,19 +287,23 @@ limitations under the License.
               } else if (r === 2) {
                 var data = new Uint32Array(e.data, 4);
                 console.log("hist1 length: ", data.length);
-                var hist1 = [];
+                mca1_data.length = 0;
                 for (let entry of data.entries()) {
-                  hist1.push(entry);
+                  mca1_data.push(entry);
                 }
-                //$.plot($("#placeholder"), [hist1]);
+                if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+                  update_chart();
+                }
               } else if (r === 3) {
                 var data = new Uint32Array(evt.data, 4);
                 console.log("hist2 length: ", data.length);
-                var hist2 = [];
+                mca2_data.length = 0;
                 for (let entry of data.entries()) {
-                    hist2.push(entry);
+                  mca2_data.push(entry);
                 }
-                //$.plot($("#placeholder"), [hist2]);
+                if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+                  update_chart();
+                }
               } else if (r === 4) {
                 var status = new Uint32Array(e.data, 4)[0];
                 console.log("status: ", status);
@@ -288,23 +337,6 @@ limitations under the License.
           return ws;
         }
 
-//        function closeSocket() {
-//            log('closing');
-//            ws.close();
-//        }
-
-//        function sendText() {
-//            var message = document.getElementById('message').value;
-//            log('sending: ' + message);
-//            ws.send(message);
-//        }
-
-//        function sendBinary() {
-//            var message = decodeHexString(document.getElementById('message').value);
-//            log('sending binary: ' + encodeHexString(message));
-//            ws.send(new Uint8Array(message).buffer);
-//        }
-
         //
         // Send commands to device
         //
@@ -319,6 +351,7 @@ limitations under the License.
             dataInt[1] = chan;
             dataFloat[0] = data;
             wsock.send(buffer, {binary:true});
+            console.log("code:"+code+", chan:"+chan+", data:"+data);
           }
         }
 
@@ -380,8 +413,264 @@ limitations under the License.
             }
           };
         }
+        
+        function init_chart_handlers() {
+          $("#mca-chart").bind("plotclick", function (event, pos, item) {
+            if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+              if (mca1_cursor_mode === "zoomin") {
+                zoom_around_cursor_xpos(pos.x.toFixed(0), mca1_data, chart.getAxes(), mca1_options, true);
+              }
+            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+              if (mca2_cursor_mode === "zoomin") {
+                zoom_around_cursor_xpos(pos.x.toFixed(0), mca2_data, chart.getAxes(), mca2_options, true);
+              }
+            }
+          });
+
+        }
+        
+        //
+        //
+        //
+        function zoom_around_cursor_xpos(xpos, data, axes, options, refresh) {
+          if (data.length > 0) {
+            // zoom in by a factor of 2
+            var dmin = parseInt(axes.xaxis.datamin);
+            var dmax = parseInt(axes.xaxis.datamax);
+            var xmin = parseInt(options.xaxis.min);
+            var xmax = parseInt(options.xaxis.max);
+            var xrng = (xmax - xmin) / 2;
+            if (xrng > 100) {
+              xrng /= 2;
+              xmin += (parseInt(xpos) - xmin) / 2;
+              xmax -= (xmax - parseInt(xpos)) / 2;
+              if (xmin < dmin) {
+                xmin = dmin;
+                xmax = xmin + (xrng * 2);
+              } else if (xmax > dmax) {
+                xmax = dmax;
+                xmin = xmax - (xrng * 2);
+              }
+              options.xaxis.min = xmin;
+              options.xaxis.max = xmax;
+              options.xaxis.tickSize = get_zoom_ticks(xmin, xmax, options);
+              console.log("options:"+options.toString());
+              if (refresh) {
+                update_chart();
+              }
+            }
+          }
+        }
+        
+        //
+        //
+        //
+        function get_zoom_ticks(xmin, xmax, options) {
+          if (options.yaxis.transform === null) {
+            var xrng = xmax - xmin;
+            if (xrng < 100) {
+              t = 10;
+            } else if (xrng < 500) {
+              t = 50;
+            } else if (xrng < 1000) {
+              t = 100;
+            } else if (xrng < 2000) {
+              t = 200;
+            } else if (xrng < 5000) {
+              t = 500;
+            } else if (xrng < 10000) {
+              t = 1000;
+            } else {
+              t = 1000;
+            }
+            return t;
+          }
+          else {
+            return 0;
+          }
+        }
 
 
+        //
+        //
+        //
+        function adjust_vertical_scale_and_update(adjustment) {
+          if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+            adjust_vertical_scale(mca1_options, mca1_y_range, adjustment);
+          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+            adjust_vertical_scale(mca2_options, mca2_y_range, adjustment);
+          }
+         
+          update_chart();
+        }
+        
+        //
+        //
+        //
+        function adjust_vertical_scale(options, y_range, adjustment) {
+          if (options.yaxis.transform === null) { // Linear y scale
+             if (adjustment > 0) {
+               for ( var i = 0, l = y_range[0].length - 1; i < l; i++ ) {
+                 if (options.yaxis.max <= y_range[0][i]) {
+                   options.yaxis.max = y_range[0][i+1];
+                   break;
+                 }
+               }
+             } else if (adjustment < 0) {
+               for ( var i = y_range[0].length-1; i > 0; i-- ) {
+                 if (options.yaxis.max >= y_range[0][i]) {
+                   options.yaxis.max = y_range[0][i-1];
+                   break;
+                 }
+               }
+             }
+           } else { // Log y scale
+             if (adjustment > 0) {
+               for ( var i = 0, l = y_range[1].length - 1; i < l; i++ ) {
+                 if (options.yaxis.max <= y_range[1][i]) {
+                   options.yaxis.max = y_range[1][i+1];
+                   break;
+                 }
+               }
+             } else if (adjustment < 0) {
+               for ( var i = y_range[1].length-1; i > 0; i-- ) {
+                 if (options.yaxis.max >= y_range[1][i]) {
+                   options.yaxis.max = y_range[1][i-1];
+                   break;
+                 }
+               }
+             }
+           }
+        }
+
+        //
+        //
+        //
+        function set_cursor_mode(mode) {
+          console.log("set cursor mode:"+mode);
+          if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+            mca1_cursor_mode = set_cursor_mode_options(mode, mca1_options, mca1_cursor_mode);
+          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+            mca2_cursor_mode, set_cursor_mode_options(mode, mca2_options, mca2_cursor_mode);
+          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
+            osc_cursor_mode = set_cursor_mode_options(mode, osc_options, osc_cursor_mode);
+          }
+        }
+
+        //
+        //
+        //
+        function set_cursor_mode_options(mode, options) {
+          if (mode === "clearall") {            
+          } else if (mode === "zoomin") {
+            return mode;
+          } else if (mode === "clearall") {
+  ////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////
+            // first clear any roiset modes
+            if (roi2set !== "") {
+              $("#roi"+roi2set).removeClass("current-roi");
+              roi2set = "";
+              options.selection.mode = null;
+              replot(options);
+            }
+            // now clear any zoomin mode
+            if (zoom_mode !== "") {
+              $("button.zoom-in-button").removeClass("current-zoom");
+              zoom_mode = "";
+            }
+            // now clear pan button
+            if (pan_mode !== "") {
+              $("button.pan-button").removeClass("current-zoom");
+              pan_mode = "";
+              options.pan.interactive = false;
+              replot(options);
+            }
+          } else if (mode === "pan") {
+            // first clear any roiset modes
+            if (roi2set !== "") {
+              $("#roi"+roi2set).removeClass("current-roi");
+              roi2set = "";
+              options.selection.mode = null;
+            }
+            // now clear any zoomin mode
+            if (zoom_mode !== "") {
+              $("button.zoom-in-button").removeClass("current-zoom");
+              zoom_mode = "";
+            }
+            // now set pan mode
+            $("button.pan-button").addClass("current-zoom");
+            pan_mode = "pan";
+            options.pan.interactive = true;
+            replot(options);
+            $.notify("Pan spectrum region using mouse.", "info");
+          } else if (mode === "zoomin") {
+            // first clear any roiset modes
+            if (roi2set !== "") {
+              $("#roi"+roi2set).removeClass("current-roi");
+              roi2set = "";
+              options.selection.mode = null;
+              replot(options);
+            }
+            // now clear pan button
+            if (pan_mode !== "") {
+              $("button.pan-button").removeClass("current-zoom");
+              pan_mode = "";
+              options.pan.interactive = false;
+              replot(options);
+            }
+            // now set zoomin mode
+            if (zoom_mode === "") {
+              $("button.zoom-in-button").addClass("current-zoom");
+              zoom_mode = mode;
+            }
+            $.notify("Select spectrum region using mouse.", "info");
+          } else if (mode === "roi2set") {
+            if (acquiring) {
+              $.notify("Cannot set ROI while acquiring spectra.", "info");              
+            } else {
+              // first clear any zoomin mode
+              if (zoom_mode !== "") {
+                $("button.zoom-in-button").removeClass("current-zoom");
+                zoom_mode = "";
+              }
+              // now clear pan button
+              if (pan_mode !== "") {
+                $("button.pan-button").removeClass("current-zoom");
+                pan_mode = "";
+                options.pan.interactive = false;
+              }
+              // now set roiset mode
+              if (roi2set !== "") {
+                $("#roi"+roi2set).removeClass("current-roi");
+                roi2set = "";
+              }
+              roi2set = param;
+              options.selection.mode = "x";
+              replot(options);
+              $("#roi"+param).addClass("current-roi");
+              $.notify("Select ROI #" + param + " region using mouse.", "info");
+            }
+          }
+        }
+
+        //
+        //
+        //
+        function update_chart() {
+          if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+            chart = $.plot("#mca-chart", [mca1_data], mca1_options);
+          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+            chart = $.plot("#mca-chart", [mca2_data], mca2_options);
+          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
+
+          }
+        }
+
+        //
+        //
+        //
         function show_busy_indicator(show) {
           if (show) {
             $('body').removeClass('loaded');
@@ -532,6 +821,7 @@ limitations under the License.
           if (onscreen !== 'undefined' && onscreen !== null && onscreen) {
             Materialize.toast(msg, TOAST_DELAY);
           }
+          $("<p>"+msg+"</p>").appendTo('#messages');
         }
 
         //
@@ -831,21 +1121,57 @@ limitations under the License.
           $('#download').on('click', function(e) {
             var file = null;
             var data = null;
+            var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
-              data = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              if (format === "ortec-chn") {
+                data = "data:application/octet-stream;base64,"+uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
+              } else if (format === "json-txt") {
+                data = "data:text/plain,{'x':1234}";
+              }
               file = "mca1-data.gif";
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
-              data = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              if (format === "ortec-chn") {
+                data = "data:application/octet-stream;base64,"+uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
+              } else if (format === "json-txt") {
+                data = data = "data:text/plain,{'x':1234}";
+              }
               file = "mca2-data.gif";
             }
             if (file !== null) {
               download(data, file);
             }
-          });          
+          });
+          
+          // zoom in button
+          $('#zoomin').on('click', function(e) {
+            set_cursor_mode("zoomin");
+          });
         }
         
+        //
         function init_tabs() {
           select_tab(localStorage.getItem(MCPHA_SELECTED_TAB));
+        }
+        
+        //
+        //
+        //
+        function init_keypress_handlers() {
+          // Catch keypressess
+          // left = 37, up = 38, right = 39, down = 40
+          $(document).keyup(function (e) {
+            if (e.which === 37) {
+              console.log("****YOU PRESSED LEFT****");
+            } else if (e.which === 38) {
+              adjust_vertical_scale_and_update(+1);
+            } else if (e.which === 39) {
+              console.log("****YOU PRESSED RIGHT****");
+            } else if (e.which === 40) {
+              adjust_vertical_scale_and_update(-1);
+            } else if (e.which === 13) {
+              console.log("****YOU PRESSED ENTER****");
+            }
+          });
         }
         
         // initialise device connection status indicator
@@ -856,6 +1182,12 @@ limitations under the License.
 
         // install tool handlers
         init_tool_handlers();
+
+        // init chart handlers
+        init_chart_handlers();
+        
+        // install keypress handlers
+        init_keypress_handlers();
         
         //
         // Install sidebar menu click handler to show/hide sidebar menu
@@ -930,9 +1262,9 @@ limitations under the License.
             <li><a class="btn-floating green" title="Set ROI #3"><i class="material-icons">looks_3</i></a></li>
             <li class="divider"></li>
             <li><a class="btn-floating yellow darken-1"><i class="material-icons">aspect_ratio</i></a></li>
-            <li><a class="btn-floating green"><i class="material-icons">zoom_in</i></a></li>
-            <li><a class="btn-floating green"><i class="material-icons">zoom_out</i></a></li>
-            <li><a class="btn-floating green"><i class="material-icons">pan_tool</i></a></li>
+            <li><a id="zoomin" class="btn-floating green"><i class="material-icons">zoom_in</i></a></li>
+            <li><a id="zoomout" class="btn-floating green"><i class="material-icons">zoom_out</i></a></li>
+            <li><a id="pan" class="btn-floating green"><i class="material-icons">pan_tool</i></a></li>
             <li class="divider"></li>
             <li><a class="btn-floating brown lighten-2" title="Log scale"><span class="badge center white-text">Log</span></a></li>
             <li><a class="btn-floating brown lighten-2" title="Linear scale"><span class="badge center white-text">Lin</span></a></li>
@@ -1127,7 +1459,9 @@ limitations under the License.
             OSCILLOSCOPE
           </div>
           <div id="log-container">
-            LOG
+            <div id="messages">
+              
+            </div>
           </div>
         </div>
       </div>
