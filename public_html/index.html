@@ -71,7 +71,7 @@ limitations under the License.
       const WEBSOCKET_DISCONNECTED = 3;
       const WEBSOCKET_ERROR = 4;
         
-      const TIMER_FREQ = 125000000;
+      const TIMER_FREQ = 125000000.0;
       const TIME_PER_TICK = 1.0 / TIMER_FREQ;
       const SHIFT_CODE = 56;
       const SHIFT_CHAN = 52;
@@ -257,11 +257,13 @@ limitations under the License.
               // set whether mca channel 1 has negative input
               mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0,
                          localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
+              mcpha_send(MCPHA_COMMAND_GET_TIMER, 0, 0);
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 0, 0);
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
               // set whether mca channel 2 has negative input
               mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1,
                          localStorage.getItem(MCPHA_MCA_2_IN_NEG) === "true" ? 1 : 0);
+              mcpha_send(MCPHA_COMMAND_GET_TIMER, 1, 0);
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 1, 0);
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
               
@@ -284,13 +286,18 @@ limitations under the License.
                 var data = new Uint32Array(e.data, 4);
                 var timer1 = data[1] * 4294967296 + data[0];
                 console.log("timer1: ", timer1);
+                if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+                  $("#elapsedtime").text(timer1 / TIMER_FREQ);
+                }
               } else if (r === 1) {
                 var data = new Uint32Array(e.data, 4);
                 var timer2 = data[1] * 4294967296 + data[0];
                 console.log("timer2: ", timer2);
+                if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+                  update_chart();
+                }
               } else if (r === 2) {
                 var data = new Uint32Array(e.data, 4);
-                console.log("hist1 length: ", data.length);
                 mca1_data.length = 0;
                 for (let entry of data.entries()) {
                   mca1_data.push(entry);
@@ -300,7 +307,6 @@ limitations under the License.
                 }
               } else if (r === 3) {
                 var data = new Uint32Array(evt.data, 4);
-                console.log("hist2 length: ", data.length);
                 mca2_data.length = 0;
                 for (let entry of data.entries()) {
                   mca2_data.push(entry);
@@ -419,6 +425,10 @@ limitations under the License.
         }
         
         function init_chart_handlers() {
+          // set initial elapsedtime
+          $( "#acqtime_s" ).text("0");
+          $( "#elapsedtime" ).text("0");
+          
           $("#mca-chart").bind("plotclick", function (event, pos, item) {
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
               if (mca1_cursor_mode === CURSOR_MODE_ZOOMIN) {
@@ -454,7 +464,6 @@ limitations under the License.
                   var y = chart.getData()[0].data[x][1];
                   $("#cursor").text(x);
                   $("#counts").text(y);
-                  console.log("["+x+"]:["+y+"]");
                 }
               } else {
                 $("#spectrum-placeholder").css("cursor","pointer","important");
@@ -988,6 +997,7 @@ limitations under the License.
           // MCA 1 acquisition time (seconds)
           $('#'+MCPHA_MCA_1_ACQ_TIME).on('input', function(e) {
             localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#'+MCPHA_MCA_1_ACQ_TIME).val());
+            $( "#acqtime_s" ).text($('#'+MCPHA_MCA_1_ACQ_TIME).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_ACQ_TIME);
           if (s !== null && s !== 'undefined') {
@@ -1057,6 +1067,7 @@ limitations under the License.
           // MCA 2 acquisition time (seconds)
           $('#'+MCPHA_MCA_2_ACQ_TIME).on('input', function(e) {
             localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#'+MCPHA_MCA_2_ACQ_TIME).val());
+            $( "#acqtime_s" ).text($('#'+MCPHA_MCA_2_ACQ_TIME).val());
           });
           s = localStorage.getItem(MCPHA_MCA_2_ACQ_TIME);
           if (s !== null && s !== 'undefined') {

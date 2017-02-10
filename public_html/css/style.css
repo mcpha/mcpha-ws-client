@@ -371,6 +371,7 @@ main {
 #cursor-panel {
   font-size: 18px;
   font-family: monospace;
+  display: inline-block;
   position: absolute;
   top: 0px;
   left: 22px;
