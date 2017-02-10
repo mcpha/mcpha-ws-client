@@ -20,7 +20,7 @@ limitations under the License.
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
     <title>MCPHA Client</title>
 
-    <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+    <link rel='shortcut icon' type='image/x-icon' href='favicon.ico' />
 
     <!-- CSS  -->
     <link href="css/material-icons.css" rel="stylesheet">
@@ -96,6 +96,10 @@ limitations under the License.
       const MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS = 22;
       const MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA = 23;
 
+      const CURSOR_MODE_ZOOMIN = "zi";
+      const CURSOR_MODE_ZOOMOUT = "zo";
+      const CURSOR_MODE_PAN = "pan";
+      const CURSOR_MODE_CLEAR_ALL = "";
 
 
       // Returns a function, that, as long as it continues to be invoked, will not
@@ -417,12 +421,43 @@ limitations under the License.
         function init_chart_handlers() {
           $("#mca-chart").bind("plotclick", function (event, pos, item) {
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
-              if (mca1_cursor_mode === "zoomin") {
-                zoom_around_cursor_xpos(pos.x.toFixed(0), mca1_data, chart.getAxes(), mca1_options, true);
+              if (mca1_cursor_mode === CURSOR_MODE_ZOOMIN) {
+                zoom_in_around_cursor_xpos(pos.x.toFixed(0), mca1_data, chart.getAxes(), mca1_options, true);
+              } else if (mca1_cursor_mode === CURSOR_MODE_ZOOMOUT) {
+                zoom_out_around_cursor_xpos(pos.x.toFixed(0), mca1_data, chart.getAxes(), mca1_options, true);
               }
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
-              if (mca2_cursor_mode === "zoomin") {
-                zoom_around_cursor_xpos(pos.x.toFixed(0), mca2_data, chart.getAxes(), mca2_options, true);
+              if (mca2_cursor_mode === CURSOR_MODE_ZOOMIN) {
+                zoom_in_around_cursor_xpos(pos.x.toFixed(0), mca2_data, chart.getAxes(), mca2_options, true);
+              } else if (mca2_cursor_mode === CURSOR_MODE_ZOOMOUT) {
+                zoom_out_around_cursor_xpos(pos.x.toFixed(0), mca2_data, chart.getAxes(), mca2_options, true);
+              }
+            }
+          });
+
+          $("#mca-chart").bind("plothover", function (event, pos, item) {
+            var mode = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (mode === "mca-1" ||  mode === "mca-2") {
+              var cursor_mode = mode === "mca-1" ? mca1_cursor_mode : mode === "mca-2" ? mca2_cursor_mode : "";
+              if (chart.getData().length > 0) {
+                if (cursor_mode === CURSOR_MODE_ZOOMIN) {
+                  $("#mca-chart").css("cursor","url(css/images/zoom-in.ico) 9 9, auto", "important");
+                } else if (cursor_mode === CURSOR_MODE_ZOOMOUT) {
+                  $("#mca-chart").css("cursor","url(css/images/zoom-out.ico) 9 9, auto", "important");
+                } else if (cursor_mode !== CURSOR_MODE_PAN) {
+                  $("#mca-chart").css("cursor","move", "important");
+                } else {
+                  $("#mca-chart").css("cursor","crosshair", "important");
+                }
+                var x = pos.x.toFixed(0);
+                if (x > 0 && x < chart.getData()[0].data.length) {
+                  var y = chart.getData()[0].data[x][1];
+                  $("#cursor").text(x);
+                  $("#counts").text(y);
+                  console.log("["+x+"]:["+y+"]");
+                }
+              } else {
+                $("#spectrum-placeholder").css("cursor","pointer","important");
               }
             }
           });
@@ -432,7 +467,7 @@ limitations under the License.
         //
         //
         //
-        function zoom_around_cursor_xpos(xpos, data, axes, options, refresh) {
+        function zoom_in_around_cursor_xpos(xpos, data, axes, options, refresh) {
           if (data.length > 0) {
             // zoom in by a factor of 2
             var dmin = parseInt(axes.xaxis.datamin);
@@ -458,6 +493,41 @@ limitations under the License.
               if (refresh) {
                 update_chart();
               }
+            }
+          }
+        }
+        
+        //
+        //
+        //
+        function zoom_out_around_cursor_xpos(xpos, data, axes, options, refresh) {
+          if (data.length > 0) {
+            // zoom out by a factor of 2
+            var dmin = parseInt(axes.xaxis.datamin);
+            var dmax = parseInt(axes.xaxis.datamax);
+            var xmin = parseInt(options.xaxis.min);
+            var xmax = parseInt(options.xaxis.max);
+            var xrng = xmax - xmin;
+            if (xrng*2 > (dmax-dmin)) {
+              xmin = dmin;
+              xmax = dmax;
+            } else {
+              xmin -= xrng;
+              xmax += xrng;
+              if (xmin < dmin) {
+                xmin = dmin;
+                xmax = xmin + (xrng * 2);
+              } else if (xmax > dmax) {
+                xmax = dmax;
+                xmin = xmax - (xrng * 2);
+              }
+            }
+            options.xaxis.min = xmin;
+            options.xaxis.max = xmax;
+            options.xaxis.tickSize = get_zoom_ticks(xmin, xmax, options);
+            console.log("options:"+options.toString());
+            if (refresh) {
+              update_chart();
             }
           }
         }
@@ -560,10 +630,30 @@ limitations under the License.
         //
         //
         //
-        function set_cursor_mode_options(mode, options) {
-          if (mode === "clearall") {            
-          } else if (mode === "zoomin") {
-            return mode;
+        function set_cursor_mode_options(mode, options, current_mode) {
+          $("#zoomin").removeClass("darken-2");
+          if (mode === CURSOR_MODE_ZOOMIN) {
+            if (current_mode === mode) {
+              $("#zoomin").removeClass("darken-2");
+              log_status_message("ZOOM mode OFF", true);
+              return CURSOR_MODE_CLEAR_ALL;
+            } else {
+              $("#zoomout").removeClass("darken-2");
+              $("#zoomin").addClass("darken-2");
+              log_status_message("ZOOM mode IN", true);
+              return mode;
+            }
+          } else if (mode === CURSOR_MODE_ZOOMOUT) {
+            if (current_mode === mode) {
+              $("#zoomout").removeClass("darken-2");
+              log_status_message("ZOOM mode OFF", true);
+              return CURSOR_MODE_CLEAR_ALL;
+            } else {
+              $("#zoomin").removeClass("darken-2");
+              $("#zoomout").addClass("darken-2");
+              log_status_message("ZOOM mode OUT", true);
+              return mode;
+            }
           } else if (mode === "clearall") {
   ////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////
@@ -1142,9 +1232,14 @@ limitations under the License.
             }
           });
           
-          // zoom in button
+          // zoom IN button
           $('#zoomin').on('click', function(e) {
-            set_cursor_mode("zoomin");
+            set_cursor_mode(CURSOR_MODE_ZOOMIN);
+          });
+          
+          // zoom OUT button
+          $('#zoomout').on('click', function(e) {
+            set_cursor_mode(CURSOR_MODE_ZOOMOUT);
           });
         }
         
@@ -1217,7 +1312,7 @@ limitations under the License.
         
         mca2_options = default_mca_chart_options();
         
-        chart = $.plot("#mca-chart", [[0, 3], [4, 8], [8, 5], [9, 13]], mca1_options);
+        chart = $.plot("#mca-chart", [[0, 0], [16384, 0]], mca1_options);
 
         // install browser window resize handler
         window.addEventListener('resize', resize_handler);
@@ -1241,6 +1336,7 @@ limitations under the License.
       <nav>
         <div class="nav-wrapper brown darken-2">
           <a id="sidebar" href="#"><i class="left large material-icons">menu</i></a>
+          <a  id="startacq" style="margin-left: 60px" class="waves-effect waves-light btn orange lighten-4">Start</a>
           <div class="center brand-logo">MCPHA Client</div>
           <ul class="right hide-on-med-and-down">
             <li><a  id="mca-1" class="waves-effect waves-light btn orange lighten-4 selectedtab">MCA 1</a></li>
@@ -1453,6 +1549,15 @@ limitations under the License.
         </div>
         <div id="slide-body" class="side-body">
           <div id="mca-container">
+            <div id="cursor-panel">
+Cursor ......... : <span class="onscreen-message" id="cursor"></span>
+Counts ......... : <span class="onscreen-message" id="counts"></span>
+Acq. Time (s) .. : <span class="onscreen-message" id="acqtime_s"></span>
+Elapsed Time (s) : <span class="onscreen-message" id="elapsedtime"></span>
+ROI #1 ......... : <span class="onscreen-message" id="roi1_counts"></span>
+ROI #2 ......... : <span class="onscreen-message" id="roi2_counts"></span>
+ROI #3 ......... : <span class="onscreen-message" id="roi3_counts"></span>
+            </div>
             <div id="mca-chart"></div>
           </div>
           <div id="osc-container">

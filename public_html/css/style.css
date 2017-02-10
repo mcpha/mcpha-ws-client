@@ -367,3 +367,16 @@ main {
 .selectedtab {
   opacity: 0.5;
 }
+
+#cursor-panel {
+  font-size: 18px;
+  font-family: monospace;
+  position: absolute;
+  top: 0px;
+  left: 22px;
+  white-space: pre;
+  opacity: 0.5;
+  z-index: 10;
+  width: 400px;
+  padding: 10px;
+}
