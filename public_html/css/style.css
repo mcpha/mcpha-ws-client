@@ -373,11 +373,9 @@ main {
   font-family: monospace;
   display: inline-block;
   position: absolute;
-  top: 0px;
-  left: 22px;
+  left: -100px;
   white-space: pre;
   opacity: 0.5;
   z-index: 10;
   width: 400px;
-  padding: 10px;
 }

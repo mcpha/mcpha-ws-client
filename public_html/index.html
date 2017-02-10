@@ -38,7 +38,7 @@ limitations under the License.
 
     <script type="text/javascript">
       const DEVICE_CONNECTION = "device-connection";
-      
+
       const MCPHA_SIDEBAR_OPEN = "mcpha_sidebar_open";
       const MCPHA_SELECTED_TAB = "mcpha_selected_tab";
       const MCPHA_DEC_FACTOR = "mcpha_dec_factor";
@@ -70,7 +70,7 @@ limitations under the License.
       const WEBSOCKET_CONNECTING = 2;
       const WEBSOCKET_DISCONNECTED = 3;
       const WEBSOCKET_ERROR = 4;
-        
+
       const TIMER_FREQ = 125000000.0;
       const TIME_PER_TICK = 1.0 / TIMER_FREQ;
       const SHIFT_CODE = 56;
@@ -108,19 +108,22 @@ limitations under the License.
       // leading edge, instead of the trailing.
       function debounce(func, wait, immediate) {
         var timeout;
-        return function() {
+        return function () {
           var context = this, args = arguments;
-          var later = function() {
+          var later = function () {
             timeout = null;
-            if (!immediate) func.apply(context, args);
+            if (!immediate)
+              func.apply(context, args);
           };
           var callNow = immediate && !timeout;
           clearTimeout(timeout);
           timeout = setTimeout(later, wait);
-          if (callNow) func.apply(context, args);
+          if (callNow)
+            func.apply(context, args);
         };
-      };
- 
+      }
+      ;
+
       //
       //
       //
@@ -131,41 +134,42 @@ limitations under the License.
         var result = '';
         var slice;
         while (index < length) {
-          slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length)); 
+          slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
           result += String.fromCharCode.apply(null, slice);
           index += CHUNK_SIZE;
         }
         return btoa(result);
       }
-      
+
       //
       //
       //
       function string_to_uint(string) {
         var string = btoa(unescape(encodeURIComponent(string))),
-                     charList = string.split(''), uintArray = [];
+          charList = string.split(''), uintArray = [];
         for (var i = 0; i < charList.length; i++) {
           uintArray.push(charList[i].charCodeAt(0));
         }
         return new Uint8Array(uintArray);
       }
-  
-  
+
+
       $(function () {
         // websocket connection object
         var wsock = null;
-        
+
         // Device connection status
-        var devstatus = WEBSOCKET_DISCONNECTED;;
-      
+        var devstatus = WEBSOCKET_DISCONNECTED;
+        ;
+
         // MCA chartist and options
         var chart;
-        var mca1_data = [], mca1_options, mca1_cursor_mode, mca1_y_range = [[100,500,2000,10000,50000,200000,1000000],[0.1,1,10,100,1000,10000]];
-        var mca2_data = [], mca2_options, mca2_cursor_mode, mca2_y_range = [[100,500,2000,10000,50000,200000,1000000],[0.1,1,10,100,1000,10000]];
+        var mca1_data = [], mca1_options, mca1_cursor_mode, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
+        var mca2_data = [], mca2_options, mca2_cursor_mode, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var osc_data = [], osc_options, osc_cursor_mode;
-        
+
         // window resized handler
-        var resize_handler = debounce(function() {
+        var resize_handler = debounce(function () {
           resize_chart_div();
         }, 400);
 
@@ -179,30 +183,30 @@ limitations under the License.
           var rpad = parseInt($("#mca-chart").css("padding-right"), 10);
           var tpad = parseInt($("#mca-chart").css("padding-top"), 10);
           var bpad = parseInt($("#mca-chart").css("padding-bottom"), 10);
-          var w = Math.floor($("#slide-body").width())-(lpad+rpad); // less padding
-          var h = Math.floor($("#slide-body").height())-(tpad+bpad); // less padding
+          var w = Math.floor($("#slide-body").width()) - (lpad + rpad); // less padding
+          var h = Math.floor($("#slide-body").height()) - (tpad + bpad + 64); // less padding
           // regenerate the chart
           $("#mca-chart").width(w);
           $("#mca-chart").height(h);
-      
+
           update_chart();
 //          mca1_options.points.show = true;
 //          mca1_options.grid.backgroundColor = "#fff";
 //          
 //          chart = $.plot("#mca-chart", [[0, 30], [400, 80], [800, 50], [9000, 90]], mca1_options);
         }
-        
+
         //
         // Return a text string representing the device connection status
         //
         function devstatus_string(code) {
           return (code === WEBSOCKET_DISCONNECTED) ? "is disconnected" :
-                 (code === WEBSOCKET_CONNECTING) ? "is connecting" :
-                 (code === WEBSOCKET_CONNECTED) ? "is connected" :
-                 (code === WEBSOCKET_ERROR) ? "connection error" :
-                  "unknown";
+            (code === WEBSOCKET_CONNECTING) ? "is connecting" :
+            (code === WEBSOCKET_CONNECTED) ? "is connected" :
+            (code === WEBSOCKET_ERROR) ? "connection error" :
+            "unknown";
         }
-        
+
         //
         // Initialise device connection status indicator
         //
@@ -210,24 +214,24 @@ limitations under the License.
           devstatus = code;
           // update the connection icon
           if (devstatus === WEBSOCKET_CONNECTING) {
-            $("#"+DEVICE_CONNECTION).text("signal_cellular_null");
-            $("#"+DEVICE_CONNECTION).css("color", "orange");
+            $("#" + DEVICE_CONNECTION).text("signal_cellular_null");
+            $("#" + DEVICE_CONNECTION).css("color", "orange");
           } else if (devstatus === WEBSOCKET_CONNECTED) {
-            $("#"+DEVICE_CONNECTION).text("signal_cellular_4_bar");
-            $("#"+DEVICE_CONNECTION).css("color", "white");
+            $("#" + DEVICE_CONNECTION).text("signal_cellular_4_bar");
+            $("#" + DEVICE_CONNECTION).css("color", "white");
           } else if (devstatus === WEBSOCKET_DISCONNECTED) {
-            $("#"+DEVICE_CONNECTION).text("signal_cellular_null");
-            $("#"+DEVICE_CONNECTION).css("color", "white");
+            $("#" + DEVICE_CONNECTION).text("signal_cellular_null");
+            $("#" + DEVICE_CONNECTION).css("color", "white");
           } else if (devstatus === WEBSOCKET_ERROR) {
-            $("#"+DEVICE_CONNECTION).text("signal_cellular_connected_no_internet_4_bar");
-            $("#"+DEVICE_CONNECTION).css("color", "deep orange");
+            $("#" + DEVICE_CONNECTION).text("signal_cellular_connected_no_internet_4_bar");
+            $("#" + DEVICE_CONNECTION).css("color", "deep orange");
           }
           // update the tooltip
           var p = localStorage.getItem(MCPHA_DEVICE_ADDR);
-          $("#"+DEVICE_CONNECTION).prop("title", "Device " +
-                  devstatus_string(devstatus) +
-                  " (" + ((p !== null && p !== 'undefined') ? p : "0.0.0.0") +
-                  ")");
+          $("#" + DEVICE_CONNECTION).prop("title", "Device " +
+            devstatus_string(devstatus) +
+            " (" + ((p !== null && p !== 'undefined') ? p : "0.0.0.0") +
+            ")");
         }
 
         //
@@ -237,14 +241,14 @@ limitations under the License.
           if (ws !== null && ws.readyState === 1) {
             ws.close();
           }
-          
+
           update_device_connection_indicator(WEBSOCKET_CONNECTING);
-          
+
           var wsuri = "ws://" + localStorage.getItem(MCPHA_DEVICE_ADDR);
           ws = new WebSocket(wsuri);
           ws.binaryType = 'arraybuffer'; // default is 'blob'
 
-          ws.onopen = function() {
+          ws.onopen = function () {
             log_status_message('Websocket connection established.', true);
             update_device_connection_indicator(WEBSOCKET_CONNECTED);
             // initialise device state
@@ -256,21 +260,21 @@ limitations under the License.
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
               // set whether mca channel 1 has negative input
               mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0,
-                         localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
+                localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
               mcpha_send(MCPHA_COMMAND_GET_TIMER, 0, 0);
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 0, 0);
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
               // set whether mca channel 2 has negative input
               mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1,
-                         localStorage.getItem(MCPHA_MCA_2_IN_NEG) === "true" ? 1 : 0);
+                localStorage.getItem(MCPHA_MCA_2_IN_NEG) === "true" ? 1 : 0);
               mcpha_send(MCPHA_COMMAND_GET_TIMER, 1, 0);
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 1, 0);
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
-              
+
             }
           };
 
-          ws.onclose = function() {
+          ws.onclose = function () {
             // if devstatus is not WEBSOCKET_ERROR
             // then we log the closed connection
             if (devstatus !== WEBSOCKET_ERROR) {
@@ -278,8 +282,8 @@ limitations under the License.
               devstatus = WEBSOCKET_DISCONNECTED;
             }
           };
-          
-          ws.onmessage = function(e) {
+
+          ws.onmessage = function (e) {
             if (e.data instanceof ArrayBuffer) {
               var r = new Uint32Array(e.data)[0];
               if (r === 0) {
@@ -324,11 +328,11 @@ limitations under the License.
                 var chan2 = [];
                 for (let entry of data.entries()) {
                   if (entry[0] % 2) {
-                      entry[0] /= 2;
-                      chan2.push(entry);
+                    entry[0] /= 2;
+                    chan2.push(entry);
                   } else {
-                      entry[0] /= 2;
-                      chan1.push(entry);
+                    entry[0] /= 2;
+                    chan1.push(entry);
                   }
                 }
                 //$.plot($("#placeholder"), [chan1, chan2]);
@@ -336,12 +340,12 @@ limitations under the License.
             }
           };
 
-          ws.onerror = function() {
+          ws.onerror = function () {
             update_device_connection_indicator(WEBSOCKET_ERROR);
             log_status_message('Websocket error', true);
             // set connection button state
             localStorage.setItem(MCPHA_CONNECT_DEVICE, "off");
-            $('#'+MCPHA_CONNECT_DEVICE).prop('checked', false);
+            $('#' + MCPHA_CONNECT_DEVICE).prop('checked', false);
           };
 
           return ws;
@@ -356,12 +360,12 @@ limitations under the License.
             var buffer = new ArrayBuffer(16);
             var dataInt = new Uint32Array(buffer);
             var dataFloat = new Float64Array(buffer, 8);
-          
+
             dataInt[0] = code;
             dataInt[1] = chan;
             dataFloat[0] = data;
-            wsock.send(buffer, {binary:true});
-            console.log("code:"+code+", chan:"+chan+", data:"+data);
+            wsock.send(buffer, {binary: true});
+            console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           }
         }
 
@@ -383,7 +387,7 @@ limitations under the License.
               tickSize: 1000,
               min: 0,
               max: 16384,
-              transform: function(x) {
+              transform: function (x) {
                 return x;
               }
             },
@@ -394,14 +398,14 @@ limitations under the License.
               position: "right",
               max: 100,
               min: 0,
-              ticks: null,//[0.1,1,10,100,1000],
-              transform:  null//function(v) {
-              //  return Math.log(v+0.0001); /*move away from zero*/
-              //},
-              //tickDecimals: 3,
-              //tickFormatter: function (v, axis) {
-              //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
-              //}
+              ticks: null, //[0.1,1,10,100,1000],
+              transform: null//function(v) {
+                //  return Math.log(v+0.0001); /*move away from zero*/
+                //},
+                //tickDecimals: 3,
+                //tickFormatter: function (v, axis) {
+                //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
+                //}
             },
             grid: {
               backgroundColor: "#999",
@@ -423,12 +427,12 @@ limitations under the License.
             }
           };
         }
-        
+
         function init_chart_handlers() {
           // set initial elapsedtime
-          $( "#acqtime_s" ).text("0");
-          $( "#elapsedtime" ).text("0");
-          
+          $("#acqtime_s").text("0");
+          $("#elapsedtime").text("0");
+
           $("#mca-chart").bind("plotclick", function (event, pos, item) {
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
               if (mca1_cursor_mode === CURSOR_MODE_ZOOMIN) {
@@ -447,17 +451,17 @@ limitations under the License.
 
           $("#mca-chart").bind("plothover", function (event, pos, item) {
             var mode = localStorage.getItem(MCPHA_SELECTED_TAB);
-            if (mode === "mca-1" ||  mode === "mca-2") {
+            if (mode === "mca-1" || mode === "mca-2") {
               var cursor_mode = mode === "mca-1" ? mca1_cursor_mode : mode === "mca-2" ? mca2_cursor_mode : "";
               if (chart.getData().length > 0) {
                 if (cursor_mode === CURSOR_MODE_ZOOMIN) {
-                  $("#mca-chart").css("cursor","url(css/images/zoom-in.ico) 9 9, auto", "important");
+                  $("#mca-chart").css("cursor", "url(css/images/zoom-in.ico) 9 9, auto", "important");
                 } else if (cursor_mode === CURSOR_MODE_ZOOMOUT) {
-                  $("#mca-chart").css("cursor","url(css/images/zoom-out.ico) 9 9, auto", "important");
+                  $("#mca-chart").css("cursor", "url(css/images/zoom-out.ico) 9 9, auto", "important");
                 } else if (cursor_mode !== CURSOR_MODE_PAN) {
-                  $("#mca-chart").css("cursor","move", "important");
+                  $("#mca-chart").css("cursor", "move", "important");
                 } else {
-                  $("#mca-chart").css("cursor","crosshair", "important");
+                  $("#mca-chart").css("cursor", "crosshair", "important");
                 }
                 var x = pos.x.toFixed(0);
                 if (x > 0 && x < chart.getData()[0].data.length) {
@@ -466,13 +470,13 @@ limitations under the License.
                   $("#counts").text(y);
                 }
               } else {
-                $("#spectrum-placeholder").css("cursor","pointer","important");
+                $("#spectrum-placeholder").css("cursor", "pointer", "important");
               }
             }
           });
 
         }
-        
+
         //
         //
         //
@@ -498,14 +502,14 @@ limitations under the License.
               options.xaxis.min = xmin;
               options.xaxis.max = xmax;
               options.xaxis.tickSize = get_zoom_ticks(xmin, xmax, options);
-              console.log("options:"+options.toString());
+              console.log("options:" + options.toString());
               if (refresh) {
                 update_chart();
               }
             }
           }
         }
-        
+
         //
         //
         //
@@ -517,7 +521,7 @@ limitations under the License.
             var xmin = parseInt(options.xaxis.min);
             var xmax = parseInt(options.xaxis.max);
             var xrng = xmax - xmin;
-            if (xrng*2 > (dmax-dmin)) {
+            if (xrng * 2 > (dmax - dmin)) {
               xmin = dmin;
               xmax = dmax;
             } else {
@@ -534,13 +538,13 @@ limitations under the License.
             options.xaxis.min = xmin;
             options.xaxis.max = xmax;
             options.xaxis.tickSize = get_zoom_ticks(xmin, xmax, options);
-            console.log("options:"+options.toString());
+            console.log("options:" + options.toString());
             if (refresh) {
               update_chart();
             }
           }
         }
-        
+
         //
         //
         //
@@ -563,8 +567,7 @@ limitations under the License.
               t = 1000;
             }
             return t;
-          }
-          else {
+          } else {
             return 0;
           }
         }
@@ -579,54 +582,54 @@ limitations under the License.
           } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
             adjust_vertical_scale(mca2_options, mca2_y_range, adjustment);
           }
-         
+
           update_chart();
         }
-        
+
         //
         //
         //
         function adjust_vertical_scale(options, y_range, adjustment) {
           if (options.yaxis.transform === null) { // Linear y scale
-             if (adjustment > 0) {
-               for ( var i = 0, l = y_range[0].length - 1; i < l; i++ ) {
-                 if (options.yaxis.max <= y_range[0][i]) {
-                   options.yaxis.max = y_range[0][i+1];
-                   break;
-                 }
-               }
-             } else if (adjustment < 0) {
-               for ( var i = y_range[0].length-1; i > 0; i-- ) {
-                 if (options.yaxis.max >= y_range[0][i]) {
-                   options.yaxis.max = y_range[0][i-1];
-                   break;
-                 }
-               }
-             }
-           } else { // Log y scale
-             if (adjustment > 0) {
-               for ( var i = 0, l = y_range[1].length - 1; i < l; i++ ) {
-                 if (options.yaxis.max <= y_range[1][i]) {
-                   options.yaxis.max = y_range[1][i+1];
-                   break;
-                 }
-               }
-             } else if (adjustment < 0) {
-               for ( var i = y_range[1].length-1; i > 0; i-- ) {
-                 if (options.yaxis.max >= y_range[1][i]) {
-                   options.yaxis.max = y_range[1][i-1];
-                   break;
-                 }
-               }
-             }
-           }
+            if (adjustment > 0) {
+              for (var i = 0, l = y_range[0].length - 1; i < l; i++) {
+                if (options.yaxis.max <= y_range[0][i]) {
+                  options.yaxis.max = y_range[0][i + 1];
+                  break;
+                }
+              }
+            } else if (adjustment < 0) {
+              for (var i = y_range[0].length - 1; i > 0; i--) {
+                if (options.yaxis.max >= y_range[0][i]) {
+                  options.yaxis.max = y_range[0][i - 1];
+                  break;
+                }
+              }
+            }
+          } else { // Log y scale
+            if (adjustment > 0) {
+              for (var i = 0, l = y_range[1].length - 1; i < l; i++) {
+                if (options.yaxis.max <= y_range[1][i]) {
+                  options.yaxis.max = y_range[1][i + 1];
+                  break;
+                }
+              }
+            } else if (adjustment < 0) {
+              for (var i = y_range[1].length - 1; i > 0; i--) {
+                if (options.yaxis.max >= y_range[1][i]) {
+                  options.yaxis.max = y_range[1][i - 1];
+                  break;
+                }
+              }
+            }
+          }
         }
 
         //
         //
         //
         function set_cursor_mode(mode) {
-          console.log("set cursor mode:"+mode);
+          console.log("set cursor mode:" + mode);
           if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
             mca1_cursor_mode = set_cursor_mode_options(mode, mca1_options, mca1_cursor_mode);
           } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
@@ -664,12 +667,12 @@ limitations under the License.
               return mode;
             }
           } else if (mode === "clearall") {
-  ////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////
             // first clear any roiset modes
             if (roi2set !== "") {
-              $("#roi"+roi2set).removeClass("current-roi");
+              $("#roi" + roi2set).removeClass("current-roi");
               roi2set = "";
               options.selection.mode = null;
               replot(options);
@@ -689,7 +692,7 @@ limitations under the License.
           } else if (mode === "pan") {
             // first clear any roiset modes
             if (roi2set !== "") {
-              $("#roi"+roi2set).removeClass("current-roi");
+              $("#roi" + roi2set).removeClass("current-roi");
               roi2set = "";
               options.selection.mode = null;
             }
@@ -707,7 +710,7 @@ limitations under the License.
           } else if (mode === "zoomin") {
             // first clear any roiset modes
             if (roi2set !== "") {
-              $("#roi"+roi2set).removeClass("current-roi");
+              $("#roi" + roi2set).removeClass("current-roi");
               roi2set = "";
               options.selection.mode = null;
               replot(options);
@@ -727,7 +730,7 @@ limitations under the License.
             $.notify("Select spectrum region using mouse.", "info");
           } else if (mode === "roi2set") {
             if (acquiring) {
-              $.notify("Cannot set ROI while acquiring spectra.", "info");              
+              $.notify("Cannot set ROI while acquiring spectra.", "info");
             } else {
               // first clear any zoomin mode
               if (zoom_mode !== "") {
@@ -742,13 +745,13 @@ limitations under the License.
               }
               // now set roiset mode
               if (roi2set !== "") {
-                $("#roi"+roi2set).removeClass("current-roi");
+                $("#roi" + roi2set).removeClass("current-roi");
                 roi2set = "";
               }
               roi2set = param;
               options.selection.mode = "x";
               replot(options);
-              $("#roi"+param).addClass("current-roi");
+              $("#roi" + param).addClass("current-roi");
               $.notify("Select ROI #" + param + " region using mouse.", "info");
             }
           }
@@ -803,10 +806,11 @@ limitations under the License.
           }
 
           // HACK to resize chart div
-          setTimeout(function() {
-              resize_chart_div();
-            }, 120);
-          };
+          setTimeout(function () {
+            resize_chart_div();
+          }, 120);
+        }
+        ;
 
         //
         // Select div contaijner based on tab selection
@@ -920,7 +924,7 @@ limitations under the License.
           if (onscreen !== 'undefined' && onscreen !== null && onscreen) {
             Materialize.toast(msg, TOAST_DELAY);
           }
-          $("<p>"+msg+"</p>").appendTo('#messages');
+          $("<p>" + msg + "</p>").appendTo('#messages');
         }
 
         //
@@ -929,19 +933,19 @@ limitations under the License.
         function init_settings_handlers() {
           var s;
           // Device address
-          $('#'+MCPHA_DEVICE_ADDR).on('input', function(e) {
-            localStorage.setItem(MCPHA_DEVICE_ADDR, $('#'+MCPHA_DEVICE_ADDR).val());
+          $('#' + MCPHA_DEVICE_ADDR).on('input', function (e) {
+            localStorage.setItem(MCPHA_DEVICE_ADDR, $('#' + MCPHA_DEVICE_ADDR).val());
           });
           s = localStorage.getItem(MCPHA_DEVICE_ADDR);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_DEVICE_ADDR).val(s);
+            $('#' + MCPHA_DEVICE_ADDR).val(s);
           } else {
-            localStorage.setItem(MCPHA_DEVICE_ADDR, $('#'+MCPHA_DEVICE_ADDR).val());
+            localStorage.setItem(MCPHA_DEVICE_ADDR, $('#' + MCPHA_DEVICE_ADDR).val());
           }
-          
+
           // Connect device
-          $('#'+MCPHA_CONNECT_DEVICE).on('click', function(e) {
-            var on = $('#'+MCPHA_CONNECT_DEVICE).prop('checked');
+          $('#' + MCPHA_CONNECT_DEVICE).on('click', function (e) {
+            var on = $('#' + MCPHA_CONNECT_DEVICE).prop('checked');
             localStorage.setItem(MCPHA_CONNECT_DEVICE, on ? "on" : "off");
             if (on) {
               wsock = init_websocket(wsock);
@@ -954,264 +958,264 @@ limitations under the License.
           });
           s = localStorage.getItem(MCPHA_CONNECT_DEVICE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_CONNECT_DEVICE).prop('checked', s === "on");
+            $('#' + MCPHA_CONNECT_DEVICE).prop('checked', s === "on");
           } else {
-            localStorage.setItem(MCPHA_CONNECT_DEVICE,  $('#'+MCPHA_CONNECT_DEVICE).prop('checked') ? "on" : "off");
+            localStorage.setItem(MCPHA_CONNECT_DEVICE, $('#' + MCPHA_CONNECT_DEVICE).prop('checked') ? "on" : "off");
           }
-          
+
           // Decimation factor (between 4 and 8192)
-          $('#'+MCPHA_DEC_FACTOR).on('input', function(e) {
+          $('#' + MCPHA_DEC_FACTOR).on('input', function (e) {
             // TODO: ensure number is between 4 and 8192 in increments of 4
-            localStorage.setItem(MCPHA_DEC_FACTOR, $('#'+MCPHA_DEC_FACTOR).val());
+            localStorage.setItem(MCPHA_DEC_FACTOR, $('#' + MCPHA_DEC_FACTOR).val());
           });
           s = localStorage.getItem(MCPHA_DEC_FACTOR);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_DEC_FACTOR).val(s);
+            $('#' + MCPHA_DEC_FACTOR).val(s);
           } else {
-            localStorage.setItem(MCPHA_DEC_FACTOR, $('#'+MCPHA_DEC_FACTOR).val());
+            localStorage.setItem(MCPHA_DEC_FACTOR, $('#' + MCPHA_DEC_FACTOR).val());
           }
-          
+
           // MCA data format
-          $('#'+MCPHA_MCA_DATA_FORMAT).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#'+MCPHA_MCA_DATA_FORMAT).val());
+          $('#' + MCPHA_MCA_DATA_FORMAT).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#' + MCPHA_MCA_DATA_FORMAT).val());
           });
           s = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_DATA_FORMAT).val(s);
-            $('#'+MCPHA_MCA_DATA_FORMAT).material_select();
+            $('#' + MCPHA_MCA_DATA_FORMAT).val(s);
+            $('#' + MCPHA_MCA_DATA_FORMAT).material_select();
           } else {
-            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#'+MCPHA_MCA_DATA_FORMAT).val());
+            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#' + MCPHA_MCA_DATA_FORMAT).val());
           }
-          
+
           // MCA 1 input negative
-          $('#'+MCPHA_MCA_1_IN_NEG).on('click', function(e) {
-            localStorage.setItem(MCPHA_MCA_1_IN_NEG, $('#'+MCPHA_MCA_1_IN_NEG).prop('checked') ? "true" : "false");
+          $('#' + MCPHA_MCA_1_IN_NEG).on('click', function (e) {
+            localStorage.setItem(MCPHA_MCA_1_IN_NEG, $('#' + MCPHA_MCA_1_IN_NEG).prop('checked') ? "true" : "false");
           });
           s = localStorage.getItem(MCPHA_MCA_1_IN_NEG);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_1_IN_NEG).prop('checked', s === "true");
+            $('#' + MCPHA_MCA_1_IN_NEG).prop('checked', s === "true");
           } else {
-            localStorage.setItem(MCPHA_MCA_1_IN_NEG, $('#'+MCPHA_MCA_1_IN_NEG).prop('checked') ? "true" : "false");
+            localStorage.setItem(MCPHA_MCA_1_IN_NEG, $('#' + MCPHA_MCA_1_IN_NEG).prop('checked') ? "true" : "false");
           }
-          
+
           // MCA 1 acquisition time (seconds)
-          $('#'+MCPHA_MCA_1_ACQ_TIME).on('input', function(e) {
-            localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#'+MCPHA_MCA_1_ACQ_TIME).val());
-            $( "#acqtime_s" ).text($('#'+MCPHA_MCA_1_ACQ_TIME).val());
+          $('#' + MCPHA_MCA_1_ACQ_TIME).on('input', function (e) {
+            localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#' + MCPHA_MCA_1_ACQ_TIME).val());
+            $("#acqtime_s").text($('#' + MCPHA_MCA_1_ACQ_TIME).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_ACQ_TIME);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_1_ACQ_TIME).val(s);
+            $('#' + MCPHA_MCA_1_ACQ_TIME).val(s);
           } else {
-            localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#'+MCPHA_MCA_1_ACQ_TIME).val());
+            localStorage.setItem(MCPHA_MCA_1_ACQ_TIME, $('#' + MCPHA_MCA_1_ACQ_TIME).val());
           }
-          
+
           // MCA 1 trigger mode (normal or automatic)
-          $('#'+MCPHA_MCA_1_TRIG_MODE).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_MODE, $('#'+MCPHA_MCA_1_TRIG_MODE).val());
+          $('#' + MCPHA_MCA_1_TRIG_MODE).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_MODE, $('#' + MCPHA_MCA_1_TRIG_MODE).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_TRIG_MODE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_1_TRIG_MODE).val(s);
-            $('#'+MCPHA_MCA_1_TRIG_MODE).material_select();
+            $('#' + MCPHA_MCA_1_TRIG_MODE).val(s);
+            $('#' + MCPHA_MCA_1_TRIG_MODE).material_select();
           } else {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_MODE, $('#'+MCPHA_MCA_1_TRIG_MODE).val());
+            localStorage.setItem(MCPHA_MCA_1_TRIG_MODE, $('#' + MCPHA_MCA_1_TRIG_MODE).val());
           }
-          
+
           // MCA 1 trigger source (channel 1 or channel 2)
-          $('#'+MCPHA_MCA_1_TRIG_SOURCE).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_SOURCE, $('#'+MCPHA_MCA_1_TRIG_SOURCE).val());
+          $('#' + MCPHA_MCA_1_TRIG_SOURCE).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_SOURCE, $('#' + MCPHA_MCA_1_TRIG_SOURCE).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_TRIG_SOURCE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_1_TRIG_SOURCE).val(s);
-            $('#'+MCPHA_MCA_1_TRIG_SOURCE).material_select();
+            $('#' + MCPHA_MCA_1_TRIG_SOURCE).val(s);
+            $('#' + MCPHA_MCA_1_TRIG_SOURCE).material_select();
           } else {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_SOURCE, $('#'+MCPHA_MCA_1_TRIG_SOURCE).val());
+            localStorage.setItem(MCPHA_MCA_1_TRIG_SOURCE, $('#' + MCPHA_MCA_1_TRIG_SOURCE).val());
           }
-          
+
           // MCA 1 trigger edge (rising or falling)
-          $('#'+MCPHA_MCA_1_TRIG_EDGE).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_EDGE, $('#'+MCPHA_MCA_1_TRIG_EDGE).val());
+          $('#' + MCPHA_MCA_1_TRIG_EDGE).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_EDGE, $('#' + MCPHA_MCA_1_TRIG_EDGE).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_TRIG_EDGE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_1_TRIG_EDGE).val(s);
-            $('#'+MCPHA_MCA_1_TRIG_EDGE).material_select();
+            $('#' + MCPHA_MCA_1_TRIG_EDGE).val(s);
+            $('#' + MCPHA_MCA_1_TRIG_EDGE).material_select();
           } else {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_EDGE, $('#'+MCPHA_MCA_1_TRIG_EDGE).val());
+            localStorage.setItem(MCPHA_MCA_1_TRIG_EDGE, $('#' + MCPHA_MCA_1_TRIG_EDGE).val());
           }
-          
+
           // MCA 1 Trigger level
-          $('#'+MCPHA_MCA_1_TRIG_LEVEL).on('input', function(e) {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_LEVEL, $('#'+MCPHA_MCA_1_TRIG_LEVEL).val());
+          $('#' + MCPHA_MCA_1_TRIG_LEVEL).on('input', function (e) {
+            localStorage.setItem(MCPHA_MCA_1_TRIG_LEVEL, $('#' + MCPHA_MCA_1_TRIG_LEVEL).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_TRIG_LEVEL);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_1_TRIG_LEVEL).val(s);
+            $('#' + MCPHA_MCA_1_TRIG_LEVEL).val(s);
           } else {
-            localStorage.setItem(MCPHA_MCA_1_TRIG_LEVEL, $('#'+MCPHA_MCA_1_TRIG_LEVEL).val());
+            localStorage.setItem(MCPHA_MCA_1_TRIG_LEVEL, $('#' + MCPHA_MCA_1_TRIG_LEVEL).val());
           }
-          
+
           // MCA 2 input negative
-          $('#'+MCPHA_MCA_2_IN_NEG).on('click', function(e) {
-            localStorage.setItem(MCPHA_MCA_2_IN_NEG, $('#'+MCPHA_MCA_2_IN_NEG).prop('checked') ? "true" : "false");
+          $('#' + MCPHA_MCA_2_IN_NEG).on('click', function (e) {
+            localStorage.setItem(MCPHA_MCA_2_IN_NEG, $('#' + MCPHA_MCA_2_IN_NEG).prop('checked') ? "true" : "false");
           });
           s = localStorage.getItem(MCPHA_MCA_2_IN_NEG);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_2_IN_NEG).prop('checked', s === "true");
+            $('#' + MCPHA_MCA_2_IN_NEG).prop('checked', s === "true");
           } else {
-            localStorage.setItem(MCPHA_MCA_2_IN_NEG, $('#'+MCPHA_MCA_2_IN_NEG).prop('checked') ? "true" : "false");
+            localStorage.setItem(MCPHA_MCA_2_IN_NEG, $('#' + MCPHA_MCA_2_IN_NEG).prop('checked') ? "true" : "false");
           }
-          
+
           // MCA 2 acquisition time (seconds)
-          $('#'+MCPHA_MCA_2_ACQ_TIME).on('input', function(e) {
-            localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#'+MCPHA_MCA_2_ACQ_TIME).val());
-            $( "#acqtime_s" ).text($('#'+MCPHA_MCA_2_ACQ_TIME).val());
+          $('#' + MCPHA_MCA_2_ACQ_TIME).on('input', function (e) {
+            localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#' + MCPHA_MCA_2_ACQ_TIME).val());
+            $("#acqtime_s").text($('#' + MCPHA_MCA_2_ACQ_TIME).val());
           });
           s = localStorage.getItem(MCPHA_MCA_2_ACQ_TIME);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_2_ACQ_TIME).val(s);
+            $('#' + MCPHA_MCA_2_ACQ_TIME).val(s);
           } else {
-            localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#'+MCPHA_MCA_2_ACQ_TIME).val());
+            localStorage.setItem(MCPHA_MCA_2_ACQ_TIME, $('#' + MCPHA_MCA_2_ACQ_TIME).val());
           }
-          
+
           // MCA 2 trigger mode (normal or automatic)
-          $('#'+MCPHA_MCA_2_TRIG_MODE).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_MODE, $('#'+MCPHA_MCA_2_TRIG_MODE).val());
+          $('#' + MCPHA_MCA_2_TRIG_MODE).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_MODE, $('#' + MCPHA_MCA_2_TRIG_MODE).val());
           });
           s = localStorage.getItem(MCPHA_MCA_2_TRIG_MODE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_2_TRIG_MODE).val(s);
-            $('#'+MCPHA_MCA_2_TRIG_MODE).material_select();
+            $('#' + MCPHA_MCA_2_TRIG_MODE).val(s);
+            $('#' + MCPHA_MCA_2_TRIG_MODE).material_select();
           } else {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_MODE, $('#'+MCPHA_MCA_2_TRIG_MODE).val());
+            localStorage.setItem(MCPHA_MCA_2_TRIG_MODE, $('#' + MCPHA_MCA_2_TRIG_MODE).val());
           }
-          
+
           // MCA 2 trigger source (channel 1 or channel 2)
-          $('#'+MCPHA_MCA_2_TRIG_SOURCE).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_SOURCE, $('#'+MCPHA_MCA_2_TRIG_SOURCE).val());
+          $('#' + MCPHA_MCA_2_TRIG_SOURCE).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_SOURCE, $('#' + MCPHA_MCA_2_TRIG_SOURCE).val());
           });
           s = localStorage.getItem(MCPHA_MCA_2_TRIG_SOURCE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_2_TRIG_SOURCE).val(s);
-            $('#'+MCPHA_MCA_2_TRIG_SOURCE).material_select();
+            $('#' + MCPHA_MCA_2_TRIG_SOURCE).val(s);
+            $('#' + MCPHA_MCA_2_TRIG_SOURCE).material_select();
           } else {
-           localStorage.setItem(MCPHA_MCA_2_TRIG_SOURCE, $('#'+MCPHA_MCA_2_TRIG_SOURCE).val());
+            localStorage.setItem(MCPHA_MCA_2_TRIG_SOURCE, $('#' + MCPHA_MCA_2_TRIG_SOURCE).val());
           }
-          
+
           // MCA 2 trigger edge (rising or falling)
-          $('#'+MCPHA_MCA_2_TRIG_EDGE).on('change', function(e) {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_EDGE, $('#'+MCPHA_MCA_2_TRIG_EDGE).val());
+          $('#' + MCPHA_MCA_2_TRIG_EDGE).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_EDGE, $('#' + MCPHA_MCA_2_TRIG_EDGE).val());
           });
           s = localStorage.getItem(MCPHA_MCA_2_TRIG_EDGE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_2_TRIG_EDGE).val(s);
-            $('#'+MCPHA_MCA_2_TRIG_EDGE).material_select();
+            $('#' + MCPHA_MCA_2_TRIG_EDGE).val(s);
+            $('#' + MCPHA_MCA_2_TRIG_EDGE).material_select();
           } else {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_EDGE, $('#'+MCPHA_MCA_2_TRIG_EDGE).val());
+            localStorage.setItem(MCPHA_MCA_2_TRIG_EDGE, $('#' + MCPHA_MCA_2_TRIG_EDGE).val());
           }
-          
+
           // MCA 2 Trigger level
-          $('#'+MCPHA_MCA_2_TRIG_LEVEL).on('input', function(e) {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_LEVEL, $('#'+MCPHA_MCA_2_TRIG_LEVEL).val());
+          $('#' + MCPHA_MCA_2_TRIG_LEVEL).on('input', function (e) {
+            localStorage.setItem(MCPHA_MCA_2_TRIG_LEVEL, $('#' + MCPHA_MCA_2_TRIG_LEVEL).val());
           });
           s = localStorage.getItem(MCPHA_MCA_2_TRIG_LEVEL);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_MCA_2_TRIG_LEVEL).val(s);
+            $('#' + MCPHA_MCA_2_TRIG_LEVEL).val(s);
           } else {
-            localStorage.setItem(MCPHA_MCA_2_TRIG_LEVEL, $('#'+MCPHA_MCA_2_TRIG_LEVEL).val());
+            localStorage.setItem(MCPHA_MCA_2_TRIG_LEVEL, $('#' + MCPHA_MCA_2_TRIG_LEVEL).val());
           }
-          
+
           // Oscilloscope channel 1 input
-          $('#'+MCPHA_OSC_1_IN).on('click', function(e) {
-            localStorage.setItem(MCPHA_OSC_1_IN, $('#'+MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
+          $('#' + MCPHA_OSC_1_IN).on('click', function (e) {
+            localStorage.setItem(MCPHA_OSC_1_IN, $('#' + MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
           });
           s = localStorage.getItem(MCPHA_OSC_1_IN);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_1_IN).prop('checked', s === "true");
+            $('#' + MCPHA_OSC_1_IN).prop('checked', s === "true");
           } else {
-            localStorage.setItem(MCPHA_OSC_1_IN, $('#'+MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
+            localStorage.setItem(MCPHA_OSC_1_IN, $('#' + MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
           }
-          
+
           // Oscilloscope channel 1 input negative
-          $('#'+MCPHA_OSC_1_IN_NEG).on('click', function(e) {
-            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#'+MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
+          $('#' + MCPHA_OSC_1_IN_NEG).on('click', function (e) {
+            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#' + MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
           });
           s = localStorage.getItem(MCPHA_OSC_1_IN_NEG);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_1_IN_NEG).prop('checked', s === "true");
+            $('#' + MCPHA_OSC_1_IN_NEG).prop('checked', s === "true");
           } else {
-            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#'+MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
+            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#' + MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
           }
-          
+
           // Oscilloscope channel 2 input
-          $('#'+MCPHA_OSC_2_IN).on('click', function(e) {
-            localStorage.setItem(MCPHA_OSC_2_IN, $('#'+MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
+          $('#' + MCPHA_OSC_2_IN).on('click', function (e) {
+            localStorage.setItem(MCPHA_OSC_2_IN, $('#' + MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
           });
           s = localStorage.getItem(MCPHA_OSC_2_IN);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_2_IN).prop('checked', s === "true");
+            $('#' + MCPHA_OSC_2_IN).prop('checked', s === "true");
           } else {
-            localStorage.setItem(MCPHA_OSC_2_IN, $('#'+MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
+            localStorage.setItem(MCPHA_OSC_2_IN, $('#' + MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
           }
-          
+
           // Oscilloscope channel 2 input negative
-          $('#'+MCPHA_OSC_2_IN_NEG).on('click', function(e) {
-            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#'+MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
+          $('#' + MCPHA_OSC_2_IN_NEG).on('click', function (e) {
+            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#' + MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
           });
           s = localStorage.getItem(MCPHA_OSC_2_IN_NEG);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_2_IN_NEG).prop('checked', s === "true");
+            $('#' + MCPHA_OSC_2_IN_NEG).prop('checked', s === "true");
           } else {
-            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#'+MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
+            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#' + MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
           }
-          
+
           // Oscilloscope trigger mode (normal or automatic)
-          $('#'+MCPHA_OSC_TRIG_MODE).on('change', function(e) {
-            localStorage.setItem(MCPHA_OSC_TRIG_MODE, $('#'+MCPHA_OSC_TRIG_MODE).val());
+          $('#' + MCPHA_OSC_TRIG_MODE).on('change', function (e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_MODE, $('#' + MCPHA_OSC_TRIG_MODE).val());
           });
           s = localStorage.getItem(MCPHA_OSC_TRIG_MODE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_TRIG_MODE).val(s);
-            $('#'+MCPHA_OSC_TRIG_MODE).material_select();
+            $('#' + MCPHA_OSC_TRIG_MODE).val(s);
+            $('#' + MCPHA_OSC_TRIG_MODE).material_select();
           } else {
-            localStorage.setItem(MCPHA_OSC_TRIG_MODE, $('#'+MCPHA_OSC_TRIG_MODE).val());
+            localStorage.setItem(MCPHA_OSC_TRIG_MODE, $('#' + MCPHA_OSC_TRIG_MODE).val());
           }
-          
+
           // Oscilloscope trigger source (channel 1 or channel 2)
-          $('#'+MCPHA_OSC_TRIG_SOURCE).on('change', function(e) {
-            localStorage.setItem(MCPHA_OSC_TRIG_SOURCE, $('#'+MCPHA_OSC_TRIG_SOURCE).val());
+          $('#' + MCPHA_OSC_TRIG_SOURCE).on('change', function (e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_SOURCE, $('#' + MCPHA_OSC_TRIG_SOURCE).val());
           });
           s = localStorage.getItem(MCPHA_OSC_TRIG_SOURCE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_TRIG_SOURCE).val(s);
-            $('#'+MCPHA_OSC_TRIG_SOURCE).material_select();
+            $('#' + MCPHA_OSC_TRIG_SOURCE).val(s);
+            $('#' + MCPHA_OSC_TRIG_SOURCE).material_select();
           } else {
-           localStorage.setItem(MCPHA_OSC_TRIG_SOURCE, $('#'+MCPHA_OSC_TRIG_SOURCE).val());
+            localStorage.setItem(MCPHA_OSC_TRIG_SOURCE, $('#' + MCPHA_OSC_TRIG_SOURCE).val());
           }
-          
+
           // Oscilloscope trigger edge (rising or falling)
-          $('#'+MCPHA_OSC_TRIG_EDGE).on('change', function(e) {
-            localStorage.setItem(MCPHA_OSC_TRIG_EDGE, $('#'+MCPHA_OSC_TRIG_EDGE).val());
+          $('#' + MCPHA_OSC_TRIG_EDGE).on('change', function (e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_EDGE, $('#' + MCPHA_OSC_TRIG_EDGE).val());
           });
           s = localStorage.getItem(MCPHA_OSC_TRIG_EDGE);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_TRIG_EDGE).val(s);
-            $('#'+MCPHA_OSC_TRIG_EDGE).material_select();
+            $('#' + MCPHA_OSC_TRIG_EDGE).val(s);
+            $('#' + MCPHA_OSC_TRIG_EDGE).material_select();
           } else {
-            localStorage.setItem(MCPHA_OSC_TRIG_EDGE, $('#'+MCPHA_OSC_TRIG_EDGE).val());
+            localStorage.setItem(MCPHA_OSC_TRIG_EDGE, $('#' + MCPHA_OSC_TRIG_EDGE).val());
           }
-          
+
           // Oscilloscope trigger level
-          $('#'+MCPHA_OSC_TRIG_LEVEL).on('input', function(e) {
-            localStorage.setItem(MCPHA_OSC_TRIG_LEVEL, $('#'+MCPHA_OSC_TRIG_LEVEL).val());
+          $('#' + MCPHA_OSC_TRIG_LEVEL).on('input', function (e) {
+            localStorage.setItem(MCPHA_OSC_TRIG_LEVEL, $('#' + MCPHA_OSC_TRIG_LEVEL).val());
           });
           s = localStorage.getItem(MCPHA_OSC_TRIG_LEVEL);
           if (s !== null && s !== 'undefined') {
-            $('#'+MCPHA_OSC_TRIG_LEVEL).val(s);
+            $('#' + MCPHA_OSC_TRIG_LEVEL).val(s);
           } else {
-            localStorage.setItem(MCPHA_OSC_TRIG_LEVEL, $('#'+MCPHA_OSC_TRIG_LEVEL).val());
+            localStorage.setItem(MCPHA_OSC_TRIG_LEVEL, $('#' + MCPHA_OSC_TRIG_LEVEL).val());
           }
         }
 
@@ -1219,20 +1223,20 @@ limitations under the License.
         //
         //
         function init_tool_handlers() {
-          $('#download').on('click', function(e) {
+          $('#download').on('click', function (e) {
             var file = null;
             var data = null;
             var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
               if (format === "ortec-chn") {
-                data = "data:application/octet-stream;base64,"+uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
+                data = "data:application/octet-stream;base64," + uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
               } else if (format === "json-txt") {
                 data = "data:text/plain,{'x':1234}";
               }
               file = "mca1-data.gif";
             } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
               if (format === "ortec-chn") {
-                data = "data:application/octet-stream;base64,"+uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
+                data = "data:application/octet-stream;base64," + uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
               } else if (format === "json-txt") {
                 data = data = "data:text/plain,{'x':1234}";
               }
@@ -1242,23 +1246,23 @@ limitations under the License.
               download(data, file);
             }
           });
-          
+
           // zoom IN button
-          $('#zoomin').on('click', function(e) {
+          $('#zoomin').on('click', function (e) {
             set_cursor_mode(CURSOR_MODE_ZOOMIN);
           });
-          
+
           // zoom OUT button
-          $('#zoomout').on('click', function(e) {
+          $('#zoomout').on('click', function (e) {
             set_cursor_mode(CURSOR_MODE_ZOOMOUT);
           });
         }
-        
+
         //
         function init_tabs() {
           select_tab(localStorage.getItem(MCPHA_SELECTED_TAB));
         }
-        
+
         //
         //
         //
@@ -1279,7 +1283,7 @@ limitations under the License.
             }
           });
         }
-        
+
         // initialise device connection status indicator
         update_device_connection_indicator(WEBSOCKET_DISCONNECTED);
 
@@ -1291,10 +1295,10 @@ limitations under the License.
 
         // init chart handlers
         init_chart_handlers();
-        
+
         // install keypress handlers
         init_keypress_handlers();
-        
+
         //
         // Install sidebar menu click handler to show/hide sidebar menu
         //
@@ -1309,27 +1313,27 @@ limitations under the License.
 
         // initialise tabs
         init_tabs();
-        
+
         // hide busy indicator
         show_busy_indicator(false);
 
         // if device connection button is on then
         // try and establish a connection now.
-        if ($('#'+MCPHA_CONNECT_DEVICE).prop('checked')) {
+        if ($('#' + MCPHA_CONNECT_DEVICE).prop('checked')) {
           wsock = init_websocket(wsock);
         }
-        
+
         mca1_options = default_mca_chart_options();
-        
+
         mca2_options = default_mca_chart_options();
-        
+
         chart = $.plot("#mca-chart", [[0, 0], [16384, 0]], mca1_options);
 
         // install browser window resize handler
         window.addEventListener('resize', resize_handler);
         // resize chart to fit browser window
         resize_chart_div();
-        
+
         // ok ready now
         log_status_message("Ready", true);
       });
@@ -1361,24 +1365,6 @@ limitations under the License.
 
     <main>
       <div class="root-container">
-        <div id="mca-toolbar" class="fixed-action-btn horizontal click-to-toggle" style="position:absolute;top:10px;right:24px;">
-          <a class="btn-floating btn-large red"><i class="material-icons">more_vert</i></a>
-          <ul style="width: 800px;">
-            <li><a class="btn-floating green" title="Set ROI #1"><i class="material-icons">looks_one</i></a></li>
-            <li><a class="btn-floating green" title="Set ROI #2"><i class="material-icons">looks_two</i></a></li>
-            <li><a class="btn-floating green" title="Set ROI #3"><i class="material-icons">looks_3</i></a></li>
-            <li class="divider"></li>
-            <li><a class="btn-floating yellow darken-1"><i class="material-icons">aspect_ratio</i></a></li>
-            <li><a id="zoomin" class="btn-floating green"><i class="material-icons">zoom_in</i></a></li>
-            <li><a id="zoomout" class="btn-floating green"><i class="material-icons">zoom_out</i></a></li>
-            <li><a id="pan" class="btn-floating green"><i class="material-icons">pan_tool</i></a></li>
-            <li class="divider"></li>
-            <li><a class="btn-floating brown lighten-2" title="Log scale"><span class="badge center white-text">Log</span></a></li>
-            <li><a class="btn-floating brown lighten-2" title="Linear scale"><span class="badge center white-text">Lin</span></a></li>
-            <li class="divider"></li>
-            <li><a id="download" class="btn-floating red" title="Download data"><i class="material-icons">file_download</i></a></li>
-          </ul>
-        </div>
         <div id="slide-menu" class="side-nav">
           <h5>General Settings</h5>
           <form>
@@ -1394,13 +1380,13 @@ limitations under the License.
                 </label>
               </div>
             </div>
-              <div class="input-field">
-                <select id="mcpha_mca_data_format">
-                  <option selected value="json-txt">Text File</option>
-                  <option value="ortec-chn">Ortec Maestro Chn</option>
-                </select>
-                <label>MCA Data Format</label>
-              </div>
+            <div class="input-field">
+              <select id="mcpha_mca_data_format">
+                <option selected value="json-txt">Text File</option>
+                <option value="ortec-chn">Ortec Maestro Chn</option>
+              </select>
+              <label>MCA Data Format</label>
+            </div>
             <div class="input-field">
               <label>Decimation Factor</label>
               <input type="number" step="4" id="mcpha_dec_factor" value="4">
@@ -1559,15 +1545,36 @@ limitations under the License.
           </div>
         </div>
         <div id="slide-body" class="side-body">
+          <nav class="brown darken-2">
+            <div id="mca-toolbar" class="right">
+              <a class="btn waves-effect waves-light orange lighten-4" title="Set ROI #1"><i style="line-height:inherit" class="material-icons right">looks_one</i>ROI</a>
+              <a class="btn waves-effect waves-light orange lighten-4" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
+              <a class="btn waves-effect waves-light orange lighten-4" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
+              <div style="width: 30px; display:inline-block"></div>
+              <a class="btn waves-effect waves-light orange lighten-4" title="Full extent"><i style="line-height:inherit" class="material-icons">aspect_ratio</i></a>
+              <ul class="left hide-on-med-and-down">
+                <li class="divider"></li>
+                <li><a class="btn-floating yellow darken-1"><i class="material-icons">aspect_ratio</i></a></li>
+                <li><a id="zoomin" class="btn-floating green"><i class="material-icons">zoom_in</i></a></li>
+                <li><a id="zoomout" class="btn-floating green"><i class="material-icons">zoom_out</i></a></li>
+                <li><a id="pan" class="btn-floating green"><i class="material-icons">pan_tool</i></a></li>
+                <li class="divider"></li>
+                <li><a class="btn-floating brown lighten-2" title="Log scale"><span class="badge center white-text">Log</span></a></li>
+                <li><a class="btn-floating brown lighten-2" title="Linear scale"><span class="badge center white-text">Lin</span></a></li>
+                <li class="divider"></li>
+                <li><a id="download" class="btn-floating red" title="Download data"><i class="material-icons">file_download</i></a></li>
+              </ul>
+            </div>
+          </nav>
           <div id="mca-container">
             <div id="cursor-panel">
-Cursor ......... : <span class="onscreen-message" id="cursor"></span>
-Counts ......... : <span class="onscreen-message" id="counts"></span>
-Acq. Time (s) .. : <span class="onscreen-message" id="acqtime_s"></span>
-Elapsed Time (s) : <span class="onscreen-message" id="elapsedtime"></span>
-ROI #1 ......... : <span class="onscreen-message" id="roi1_counts"></span>
-ROI #2 ......... : <span class="onscreen-message" id="roi2_counts"></span>
-ROI #3 ......... : <span class="onscreen-message" id="roi3_counts"></span>
+              Cursor ......... : <span id="cursor"></span>
+              Counts ......... : <span id="counts"></span>
+              Acq. Time (s) .. : <span id="acqtime_s"></span>
+              Elapsed Time (s) : <span id="elapsedtime"></span>
+              ROI #1 ......... : <span id="roi1_counts"></span>
+              ROI #2 ......... : <span id="roi2_counts"></span>
+              ROI #3 ......... : <span id="roi3_counts"></span>
             </div>
             <div id="mca-chart"></div>
           </div>
@@ -1576,7 +1583,7 @@ ROI #3 ......... : <span class="onscreen-message" id="roi3_counts"></span>
           </div>
           <div id="log-container">
             <div id="messages">
-              
+
             </div>
           </div>
         </div>
