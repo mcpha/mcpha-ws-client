@@ -34,6 +34,7 @@ limitations under the License.
     <script type="text/javascript" src="js/jquery.multilevelpushmenu.min.js"></script>
     <script type="text/javascript" src="js/long.js"></script>
     <script type="text/javascript" src="js/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="js/jquery.flot.selection.min.js"></script>
     <script type="text/javascript" src="js/download.js"></script>
 
     <script type="text/javascript">
@@ -105,6 +106,9 @@ limitations under the License.
       const CURSOR_MODE_ZOOMOUT = "zo";
       const CURSOR_MODE_PAN = "pan";
       const CURSOR_MODE_CLEAR_ALL = "";
+      const CURSOR_MODE_SETROI_1 = "r1";
+      const CURSOR_MODE_SETROI_2 = "r2";
+      const CURSOR_MODE_SETROI_3 = "r3";
 
 
       // Returns a function, that, as long as it continues to be invoked, will not
@@ -475,18 +479,20 @@ limitations under the License.
           });
 
           $("#mca-chart").bind("plothover", function (event, pos, item) {
-            var mode = localStorage.getItem(MCPHA_SELECTED_TAB);
-            if (mode === "mca-1" || mode === "mca-2") {
-              var cursor_mode = mode === "mca-1" ? mca1_cursor_mode : mode === "mca-2" ? mca2_cursor_mode : "";
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === "mca-1" || tab === "mca-2") {
+              var cursor_mode = tab === "mca-1" ? mca1_cursor_mode : tab === "mca-2" ? mca2_cursor_mode : "";
               if (chart.getData().length > 0) {
                 if (cursor_mode === CURSOR_MODE_ZOOMIN) {
                   $("#mca-chart").css("cursor", "url(css/images/zoom-in.ico) 9 9, auto", "important");
                 } else if (cursor_mode === CURSOR_MODE_ZOOMOUT) {
                   $("#mca-chart").css("cursor", "url(css/images/zoom-out.ico) 9 9, auto", "important");
-                } else if (cursor_mode !== CURSOR_MODE_PAN) {
+                } else if (cursor_mode === CURSOR_MODE_PAN) {
                   $("#mca-chart").css("cursor", "move", "important");
-                } else {
+                } else if (cursor_mode === CURSOR_MODE_SETROI_1 || cursor_mode === CURSOR_MODE_SETROI_2 || cursor_mode !== CURSOR_MODE_SETROI_3) {
                   $("#mca-chart").css("cursor", "crosshair", "important");
+                } else {
+                  $("#mca-chart").css("cursor", "pointer", "important");
                 }
                 var x = pos.x.toFixed(0);
                 if (x > 0 && x < chart.getData()[0].data.length) {
@@ -500,6 +506,22 @@ limitations under the License.
             }
           });
 
+          //
+          // ROI selection handler
+          //
+          $("#mca-chart").bind("plotselected", function (event, ranges) {
+            console.log("roi selection - start:"+ranges.xaxis.from.toFixed(0)+" to "+ranges.xaxis.to.toFixed(0));
+            /**
+            if (roi2set !== "") {
+              ws.send("{\"type\":\"req\",\"command\":\"set_roi\",\"roi\":"+
+                      roi2set+",\"from\":"+ranges.xaxis.from.toFixed(0)+",\"to\":"+
+                      ranges.xaxis.to.toFixed(0)+"}");
+              $("#roi"+roi2set).removeClass("current-roi");
+              plot.clearSelection();
+            }
+              ***/
+             chart.clearSelection();
+          });
         }
 
         //
@@ -689,6 +711,42 @@ limitations under the License.
               $("#zoomin").removeClass("darken-2");
               $("#zoomout").addClass("darken-2");
               log_status_message("ZOOM mode OUT", true);
+              return mode;
+            }
+          } else if (mode === CURSOR_MODE_SETROI_1) {
+            if (current_mode === mode) {
+              $("#roi1").removeClass("darken-2");
+              log_status_message("Set ROI #1 mode OFF", true);
+              return CURSOR_MODE_CLEAR_ALL;
+            } else {
+              $("#roi2").removeClass("darken-2");
+              $("#roi3").removeClass("darken-2");
+              $("#roi1").addClass("darken-2");
+              log_status_message("Set ROI #1 mode ON", true);
+              return mode;
+            }
+          } else if (mode === CURSOR_MODE_SETROI_2) {
+            if (current_mode === mode) {
+              $("#roi2").removeClass("darken-2");
+              log_status_message("Set ROI #2 mode OFF", true);
+              return CURSOR_MODE_CLEAR_ALL;
+            } else {
+              $("#roi1").removeClass("darken-2");
+              $("#roi3").removeClass("darken-2");
+              $("#roi2").addClass("darken-2");
+              log_status_message("Set ROI #2 mode ON", true);
+              return mode;
+            }
+          } else if (mode === CURSOR_MODE_SETROI_3) {
+            if (current_mode === mode) {
+              $("#roi3").removeClass("darken-2");
+              log_status_message("Set ROI #1 mode OFF", true);
+              return CURSOR_MODE_CLEAR_ALL;
+            } else {
+              $("#roi1").removeClass("darken-2");
+              $("#roi2").removeClass("darken-2");
+              $("#roi3").addClass("darken-2");
+              log_status_message("Set ROI #3 mode ON", true);
               return mode;
             }
           } else if (mode === "cleartimer") {
@@ -1479,17 +1537,41 @@ limitations under the License.
 
           // ROI 1 button
           $('#roi1').on('click', function (e) {
-            console.log("roi 1 clicked");
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (set_cursor_mode(CURSOR_MODE_SETROI_1) === CURSOR_MODE_SETROI_1) {
+              if (tab === 'mca-1') {
+                mca1_options.selection.mode = "x";
+              } else if (tab === 'mca-2') {
+                mca2_options.selection.mode = "x";
+              }
+              update_chart();
+            }
           });
 
           // ROI 2 button
           $('#roi2').on('click', function (e) {
-            console.log("roi 2 clicked");
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (set_cursor_mode(CURSOR_MODE_SETROI_2) === CURSOR_MODE_SETROI_2) {
+              if (tab === 'mca-1') {
+                mca1_options.selection.mode = "x";
+              } else if (tab === 'mca-2') {
+                mca2_options.selection.mode = "x";
+              }
+              update_chart();
+            }
           });
 
           // ROI 3 button
           $('#roi3').on('click', function (e) {
-            console.log("roi 3 clicked");
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (set_cursor_mode(CURSOR_MODE_SETROI_3) === CURSOR_MODE_SETROI_3) {
+              if (tab === 'mca-1') {
+                mca1_options.selection.mode = "x";
+              } else if (tab === 'mca-2') {
+                mca2_options.selection.mode = "x";
+              }
+              update_chart();
+            }
           });
         }
 
