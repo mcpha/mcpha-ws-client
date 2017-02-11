@@ -1423,14 +1423,15 @@ limitations under the License.
             var file = null;
             var data = null;
             var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
-            if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === 'mca-1') {
               if (format === "ortec-chn") {
                 data = "data:application/octet-stream;base64," + uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
               } else if (format === "json-txt") {
                 data = "data:text/plain,{'x':1234}";
               }
               file = "mca1-data.gif";
-            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
+            } else if (tab === 'mca-2') {
               if (format === "ortec-chn") {
                 data = "data:application/octet-stream;base64," + uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
               } else if (format === "json-txt") {
@@ -1451,6 +1452,29 @@ limitations under the License.
           // zoom OUT button
           $('#zoomout').on('click', function (e) {
             set_cursor_mode(CURSOR_MODE_ZOOMOUT);
+          });
+
+          // zoom to see all channels
+          $("#fullextent").click(function () {
+            var axis = chart.getAxes();
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === 'mca-1') {
+              mca1_options.xaxis.min = axis.xaxis.datamin;
+              mca1_options.xaxis.max = Math.ceil(axis.xaxis.datamax);
+              mca1_options.yaxis.min = 0;
+              mca1_options.yaxis.max = Math.ceil(axis.yaxis.datamax);
+              mca1_options.xaxis.tickSize = get_zoom_ticks(mca1_options.xaxis.min, mca1_options.xaxis.max, mca1_options);
+              update_chart();
+              set_cursor_mode(CURSOR_MODE_CLEAR_ALL);
+            } else if (tab === 'mca-2') {
+              mca2_options.xaxis.min = axis.xaxis.datamin;
+              mca2_options.xaxis.max = Math.ceil(axis.xaxis.datamax);
+              mca2_options.yaxis.min = 0;
+              mca2_options.yaxis.max = Math.ceil(axis.yaxis.datamax);
+              mca2_options.xaxis.tickSize = get_zoom_ticks(mca2_options.xaxis.min, mca2_options.xaxis.max, mca2_options);
+              update_chart();
+              set_cursor_mode(CURSOR_MODE_CLEAR_ALL);
+            }
           });
 
           // ROI 1 button
