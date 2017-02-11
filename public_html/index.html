@@ -37,6 +37,9 @@ limitations under the License.
     <script type="text/javascript" src="js/download.js"></script>
 
     <script type="text/javascript">
+      const START_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>play_arrow</i>Start";
+      const STOP_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>stop</i>Stop";
+      
       const DEVICE_CONNECTION = "device-connection";
 
       const MCPHA_SIDEBAR_OPEN = "mcpha_sidebar_open";
@@ -65,6 +68,8 @@ limitations under the License.
       const MCPHA_OSC_TRIG_EDGE = "mcpha_osc_trig_edge";
       const MCPHA_OSC_TRIG_LEVEL = "mcpha_osc_trig_level";
       const MCPHA_MCA_DATA_FORMAT = "mcpha_mca_data_format";
+      const MCPHA_MCA_LLD = "mcpha_mca_lld";
+      const MCPHA_MCA_ULD = "mcpha_mca_uld";
       const TOAST_DELAY = 4000;
       const WEBSOCKET_CONNECTED = 1;
       const WEBSOCKET_CONNECTING = 2;
@@ -164,10 +169,12 @@ limitations under the License.
 
         // MCA chartist and options
         var chart;
+        var mca1_timer = null, mca1_acqtime = 0, mca2_timer = null, mca2_acqtime = 0;
         var mca1_data = [], mca1_options, mca1_cursor_mode, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var mca2_data = [], mca2_options, mca2_cursor_mode, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var osc_data = [], osc_options, osc_cursor_mode;
-
+        var mca1_acq = false, mca2_acq = false;
+        
         // window resized handler
         var resize_handler = debounce(function () {
           resize_chart_div();
@@ -254,24 +261,37 @@ limitations under the License.
             // initialise device state
             mcpha_send(MCPHA_COMMAND_SET_SAMPLE_RATE, 0, 4);
             mcpha_send(MCPHA_COMMAND_SET_PHA_DELAY, 0, 100);
-            mcpha_send(MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD, 0, 300);
-            mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 0, 16300);
             // if mca mode then get histogram data
-            if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === "mca-1") {
+              mcpha_send(MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD, 0,
+                parseInt(localStorage.getItem(MCPHA_MCA_LLD)));
+              mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 0,
+                parseInt(localStorage.getItem(MCPHA_MCA_ULD)));
               // set whether mca channel 1 has negative input
               mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0,
                 localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
+              // request timer value
               mcpha_send(MCPHA_COMMAND_GET_TIMER, 0, 0);
+              // request histogram data
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 0, 0);
-            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
-              // set whether mca channel 2 has negative input
+            } else if (tab === "mca-2") {
+              mcpha_send(MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD, 1,
+                parseInt(localStorage.getItem(MCPHA_MCA_LLD)));
+              mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 1,
+                parseInt(localStorage.getItem(MCPHA_MCA_ULD)));
+              // set whether mca channel 1 has negative input
               mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1,
-                localStorage.getItem(MCPHA_MCA_2_IN_NEG) === "true" ? 1 : 0);
+                localStorage.getItem(MCPHA_MCA_2_IN_NEG) === " true" ? 1 : 0);
+              // request timer value
               mcpha_send(MCPHA_COMMAND_GET_TIMER, 1, 0);
+              // request histogram data
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 1, 0);
-            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
+            } else if (tab === "osc") {
 
             }
+            // update toolbar buttons
+            update_toolbar_buttons(true);
           };
 
           ws.onclose = function () {
@@ -281,6 +301,8 @@ limitations under the License.
               log_status_message('Websocket connection closed.', true);
               devstatus = WEBSOCKET_DISCONNECTED;
             }
+            // update toolbar buttons
+            update_toolbar_buttons(false);
           };
 
           ws.onmessage = function (e) {
@@ -289,9 +311,14 @@ limitations under the License.
               if (r === 0) {
                 var data = new Uint32Array(e.data, 4);
                 var timer1 = data[1] * 4294967296 + data[0];
-                console.log("timer1: ", timer1);
+      console.log("timer1: ", timer1);
                 if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
-                  $("#elapsedtime").text(timer1 / TIMER_FREQ);
+                  $("#elapsedtime").text((timer1 / TIMER_FREQ).toFixed(1));
+                }
+                if (timer1 >= mca1_acqtime && mca1_timer !== null) {
+                  clearInterval(mca1_timer);
+                  mca1_acq = false;
+                  update_mca_acquisition_buttons_text(mca1_acq);
                 }
               } else if (r === 1) {
                 var data = new Uint32Array(e.data, 4);
@@ -346,6 +373,8 @@ limitations under the License.
             // set connection button state
             localStorage.setItem(MCPHA_CONNECT_DEVICE, "off");
             $('#' + MCPHA_CONNECT_DEVICE).prop('checked', false);
+            // disable toolbar buttons
+            update_toolbar_buttons(false);
           };
 
           return ws;
@@ -666,7 +695,7 @@ limitations under the License.
               log_status_message("ZOOM mode OUT", true);
               return mode;
             }
-          } else if (mode === "clearall") {
+          } else if (mode === "cleartimer") {
             ////////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////
@@ -804,7 +833,6 @@ limitations under the License.
           } else {
             localStorage.removeItem(MCPHA_SIDEBAR_OPEN);
           }
-
           // HACK to resize chart div
           setTimeout(function () {
             resize_chart_div();
@@ -886,6 +914,54 @@ limitations under the License.
           }
         }
 
+        //
+        // Enable/Disable toolbar button
+        //
+        function update_toolbar_buttons(enable) {
+          var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+          if (tab === null || tab.startsWith("mca")) {
+            if (enable) {
+              $('#roi1').removeClass('disabled');
+              $('#roi2').removeClass('disabled');
+              $('#roi3').removeClass('disabled');
+              $('#enableacq').removeClass('disabled');
+              $('#cleartimer').removeClass('disabled');
+              $('#cleardata').removeClass('disabled');
+              $('#fullextent').removeClass('disabled');
+              $('#zoomin').removeClass('disabled');
+              $('#zoomout').removeClass('disabled');
+              $('#pan').removeClass('disabled');
+              $('#linscale').removeClass('disabled');
+              $('#logscale').removeClass('disabled');
+              $('#download').removeClass('disabled');
+            } else {
+              $('#roi1').addClass('disabled');
+              $('#roi2').addClass('disabled');
+              $('#roi3').addClass('disabled');
+              $('#enableacq').addClass('disabled');
+              $('#cleartimer').addClass('disabled');
+              $('#cleardata').addClass('disabled');
+              $('#fullextent').addClass('disabled');
+              $('#zoomin').addClass('disabled');
+              $('#zoomout').addClass('disabled');
+              $('#pan').addClass('disabled');
+              $('#linscale').addClass('disabled');
+              $('#logscale').addClass('disabled');
+              $('#download').addClass('disabled');
+            }
+          } else if (tab === "log") {
+          } else if (tab === "osc") {
+          }
+        }
+
+        //
+        //
+        //
+        function update_mca_acquisition_buttons_text(active) {
+          //$('#enableacq').text(mca ? "Stop" : "Start");
+          $('#enableacq').html(active ? STOP_ACQUISITION_TEXT : START_ACQUISITION_TEXT);
+        }
+        
         //
         // Initialise sidebar
         //
@@ -973,6 +1049,28 @@ limitations under the License.
             $('#' + MCPHA_DEC_FACTOR).val(s);
           } else {
             localStorage.setItem(MCPHA_DEC_FACTOR, $('#' + MCPHA_DEC_FACTOR).val());
+          }
+
+          // MCA LLD
+          $('#' + MCPHA_MCA_LLD).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_LLD, $('#' + MCPHA_MCA_LLD).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_LLD);
+          if (s !== null && s !== 'undefined') {
+            $('#' + MCPHA_MCA_LLD).val(s);
+          } else {
+            localStorage.setItem(MCPHA_MCA_LLD, $('#' + MCPHA_MCA_LLD).val());
+          }
+
+          // MCA ULD
+          $('#' + MCPHA_MCA_ULD).on('change', function (e) {
+            localStorage.setItem(MCPHA_MCA_ULD, $('#' + MCPHA_MCA_ULD).val());
+          });
+          s = localStorage.getItem(MCPHA_MCA_ULD);
+          if (s !== null && s !== 'undefined') {
+            $('#' + MCPHA_MCA_ULD).val(s);
+          } else {
+            localStorage.setItem(MCPHA_MCA_ULD, $('#' + MCPHA_MCA_ULD).val());
           }
 
           // MCA data format
@@ -1223,6 +1321,103 @@ limitations under the License.
         //
         //
         function init_tool_handlers() {
+          $('#enableacq').on('click', function (e) {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === "mca-1") {
+              if (mca1_acq) {
+                // Stop acquisition
+                mcpha_send(MCPHA_COMMAND_SET_TIMER_MODE, 0, 0);
+                // stop update request timer
+                clearInterval(mca1_timer);
+              } else {
+                // Start acquisition
+                mcpha_send(MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD, 0, parseInt(localStorage.getItem(MCPHA_MCA_LLD)));
+                mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 0, parseInt(localStorage.getItem(MCPHA_MCA_ULD)));
+                // set whether mca channel 1 has negative input
+                mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0, localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
+                  // set acquisitgion time
+                mca1_acqtime = parseInt(localStorage.getItem(MCPHA_MCA_1_ACQ_TIME)) * TIMER_FREQ;
+                mcpha_send(MCPHA_COMMAND_SET_TIMER_VALUE, 0, mca1_acqtime);
+                // set timer mode
+                mcpha_send(MCPHA_COMMAND_SET_TIMER_MODE, 0, 1);
+                // activate timer to request periodic updates
+                if (mca1_timer !== null) {
+                  clearInterval(mca1_timer);
+                }
+                mca1_timer = setInterval(function () {
+                  // request timer value
+                  mcpha_send(MCPHA_COMMAND_GET_TIMER, 0, 0);
+                  // request histogram data
+                  mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 0, 0);
+                }, 1000);
+              }
+              // toggle acquisition flag and update acquisition button text
+              mca1_acq = !mca1_acq;
+              update_mca_acquisition_buttons_text(mca1_acq);
+            } else if (tab === "mca-2") {
+              if (mca2_acq) {
+                // Stop acquisition
+                mcpha_send(MCPHA_COMMAND_SET_TIMER_MODE, 1, 0);
+                // stop update request timer
+                clearInterval(mca2_timer);
+              } else {
+                // Start acquisition
+                mcpha_send(MCPHA_COMMAND_SET_PHA_MIN_THRESHOLD, 1, parseInt(localStorage.getItem(MCPHA_MCA_LLD)));
+                mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 1, parseInt(localStorage.getItem(MCPHA_MCA_ULD)));
+                // set whether mca channel 1 has negative input
+                mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1, localStorage.getItem(MCPHA_MCA_2_IN_NEG) === " true" ? 1 : 0);
+                // set acquisitgion time
+                mca2_acqtime = parseInt(localStorage.getItem(MCPHA_MCA_2_ACQ_TIME)) * TIMER_FREQ;
+                mcpha_send(MCPHA_COMMAND_SET_TIMER_VALUE, 1, mca2_acqtime);
+                // set timer mode
+                mcpha_send(MCPHA_COMMAND_SET_TIMER_MODE, 1, 1);
+                // activate timer to request periodic updates
+                if (mca2_timer !== null) {
+                  clearInterval(mca2_timer);
+                }
+                mca2_timer = setInterval(function () {
+                  // request timer value
+                  mcpha_send(MCPHA_COMMAND_GET_TIMER, 1, 0);
+                  // request histogram data
+                  mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 1, 0);
+                }, 1000);
+              }
+              // toggle acquisition flag and update acquisition button text
+              mca2_acq = !mca2_acq;
+              update_mca_acquisition_buttons_text(mca2_acq);
+            }
+          });
+
+          $('#cleartimer').on('click', function (e) {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === "mca-1") {
+              // Reset timer
+              mcpha_send(MCPHA_COMMAND_RESET_TIMER, 0, 0);
+              // request timer value
+              mcpha_send(MCPHA_COMMAND_GET_TIMER, 0, 0);
+            } else if (tab === "mca-2") {
+              // Reset timer
+              mcpha_send(MCPHA_COMMAND_RESET_TIMER, 1, 0);
+              // request timer value
+              mcpha_send(MCPHA_COMMAND_GET_TIMER, 1, 0);
+            }
+          });
+
+          $('#cleardata').on('click', function (e) {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            var ch = (tab === "mca-1") ? 0 : (tab === "mca-2") ? 1 : -1;
+            if (ch !== -1) {
+              // Reset histogram
+              mcpha_send(MCPHA_COMMAND_RESET_HISTOGRAM, ch, 0);
+              // Reset timer
+              mcpha_send(MCPHA_COMMAND_RESET_TIMER, ch, 0);
+              // request timer value
+              mcpha_send(MCPHA_COMMAND_GET_TIMER, ch, 0);
+              // request histogram
+              mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, ch, 0);
+            }
+          });
+
           $('#download').on('click', function (e) {
             var file = null;
             var data = null;
@@ -1255,6 +1450,21 @@ limitations under the License.
           // zoom OUT button
           $('#zoomout').on('click', function (e) {
             set_cursor_mode(CURSOR_MODE_ZOOMOUT);
+          });
+
+          // ROI 1 button
+          $('#roi1').on('click', function (e) {
+            console.log("roi 1 clicked");
+          });
+
+          // ROI 2 button
+          $('#roi2').on('click', function (e) {
+            console.log("roi 2 clicked");
+          });
+
+          // ROI 3 button
+          $('#roi3').on('click', function (e) {
+            console.log("roi 3 clicked");
           });
         }
 
@@ -1351,7 +1561,6 @@ limitations under the License.
       <nav>
         <div class="nav-wrapper brown darken-2">
           <a id="sidebar" href="#"><i class="left large material-icons">menu</i></a>
-          <a  id="startacq" style="margin-left: 60px" class="waves-effect waves-light btn orange lighten-4">Start</a>
           <div class="center brand-logo">MCPHA Client</div>
           <ul class="right hide-on-med-and-down">
             <li><a  id="mca-1" class="waves-effect waves-light btn orange lighten-4 selectedtab">MCA 1</a></li>
@@ -1378,6 +1587,16 @@ limitations under the License.
                   <input type="checkbox" id="mcpha_connect_device">
                   <span class="lever"></span>
                 </label>
+              </div>
+            </div>
+            <div class="valign-wrapper">
+              <div class="s6 input-field">
+                <label>LLD</label>
+                <input type="text" id="mcpha_mca_lld" value="300">
+              </div>
+              <div class="s6 input-field right">
+                <label>ULD</label>
+                <input type="text" id="mcpha_mca_uld" value="16300">
               </div>
             </div>
             <div class="input-field">
@@ -1545,23 +1764,28 @@ limitations under the License.
           </div>
         </div>
         <div id="slide-body" class="side-body">
-          <nav class="brown darken-2">
-            <div id="mca-toolbar" class="right">
-              <a class="btn waves-effect waves-light orange lighten-4" title="Set ROI #1"><i style="line-height:inherit" class="material-icons right">looks_one</i>ROI</a>
-              <a class="btn waves-effect waves-light orange lighten-4" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
-              <a class="btn waves-effect waves-light orange lighten-4" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
-              <div style="width: 10px; display:inline-block"></div>
-              <a class="btn waves-effect waves-light orange lighten-4" title="Full extent"><i style="line-height:inherit" class="material-icons">aspect_ratio</i></a>
-              <a id="zoomin" class="btn waves-effect waves-light orange lighten-4" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_in</i></a>
-              <a id="zoomout" class="btn waves-effect waves-light orange lighten-4" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_out</i></a>
-              <a id="pan" class="btn waves-effect waves-light orange lighten-4" title="Full extent"><i style="line-height:inherit" class="material-icons">pan_tool</i></a>
-              <div style="width: 10px; display:inline-block"></div>
-              <a id="linscale" class="btn waves-effect waves-light orange lighten-4" title="Log scale"><span class="badge center">Lin</span></a>
-              <a id="logscale" class="btn waves-effect waves-light orange lighten-4" title="Linear scale"><span class="badge center">Log</span></a>
-              <div style="width: 10px; display:inline-block"></div>
-              <a id="download" class="btn waves-effect waves-light orange lighten-4" title="Download data"><i  style="line-height:inherit" class="material-icons">file_download</i></a>
-              <ul class="left hide-on-med-and-down">
-              </ul>
+          <nav class="gray spacer10 no-shadow">
+            <div id="mca-toolbar">
+              <div class="left">
+                  <a id="enableacq" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set/Stop data acquisition"><i style="line-height:inherit" class="material-icons right">play_arrow</i>Start</a>
+                <a id="cleartimer" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition time"><i style="line-height:inherit" class="material-icons center">timer</i></a>
+                <a id="cleardata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition data and time"><i style="line-height:inherit" class="material-icons center">delete</i></a>
+              </div>
+              <div class="right">
+                  <a id="roi1" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #1"><i style="line-height:inherit" class="material-icons right">looks_one</i>ROI</a>
+                  <a id="roi2" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
+                  <a id="roi3" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
+                  <div style="width: 10px; display:inline-block"></div>
+                  <a id="fullextent" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons center">aspect_ratio</i></a>
+                  <a id="zoomin" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_in</i></a>
+                  <a id="zoomout" class="btn icon-btn  waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_out</i></a>
+                  <a id="pan" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons">pan_tool</i></a>
+                  <div style="width: 10px; display:inline-block"></div>
+                  <a id="linscale" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Log scale">Lin</a>
+                  <a id="logscale" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Linear scale">Log</a>
+                  <div style="width: 10px; display:inline-block"></div>
+                  <a id="download" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Download data"><i  style="line-height:inherit" class="material-icons">file_download</i></a>
+              </div>
             </div>
           </nav>
           <div id="mca-container">

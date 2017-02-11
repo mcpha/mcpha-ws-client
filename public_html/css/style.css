@@ -6,6 +6,24 @@
  * Made By MaterializeCSS.com
  */
 
+.gray {
+  background-color: #808080 !important;
+}
+
+.spacer10 {
+ padding: 0px 10px; 
+}
+
+.no-shadow {
+  box-shadow: none;
+}
+
+.icon-btn {
+  width: 40px;
+  padding: 0px;
+  margin: 0px;
+}
+
 .icon-block {
   padding: 0 15px;
 }
