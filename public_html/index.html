@@ -311,7 +311,6 @@ limitations under the License.
               if (r === 0) {
                 var data = new Uint32Array(e.data, 4);
                 var timer1 = data[1] * 4294967296 + data[0];
-      console.log("timer1: ", timer1);
                 if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
                   $("#elapsedtime").text((timer1 / TIMER_FREQ).toFixed(1));
                 }
@@ -459,9 +458,6 @@ limitations under the License.
 
         function init_chart_handlers() {
           // set initial elapsedtime
-          $("#acqtime_s").text("0");
-          $("#elapsedtime").text("0");
-
           $("#mca-chart").bind("plotclick", function (event, pos, item) {
             if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
               if (mca1_cursor_mode === CURSOR_MODE_ZOOMIN) {
@@ -863,6 +859,8 @@ limitations under the License.
             $('#mca-2').removeClass("selectedtab");
             $('#osc').removeClass("selectedtab");
             $('#log').removeClass("selectedtab");
+            // update cursor panel
+            $("#acqtime_s").text(localStorage.getItem(MCPHA_MCA_1_ACQ_TIME));
           } else if (tab === "mca-2") {
             // unhide sidebar
             $('#mca-1-sidebar').css('display', 'none');
@@ -879,6 +877,8 @@ limitations under the License.
             $('#mca-2').addClass("selectedtab");
             $('#osc').removeClass("selectedtab");
             $('#log').removeClass("selectedtab");
+            // update cursor panel
+            $("#acqtime_s").text(localStorage.getItem(MCPHA_MCA_2_ACQ_TIME));
           } else if (tab === "osc") {
             // unhide sidebar
             $('#mca-1-sidebar').css('display', 'none');
@@ -1102,6 +1102,7 @@ limitations under the License.
             $("#acqtime_s").text($('#' + MCPHA_MCA_1_ACQ_TIME).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_ACQ_TIME);
+          console.log("->"+s);
           if (s !== null && s !== 'undefined') {
             $('#' + MCPHA_MCA_1_ACQ_TIME).val(s);
           } else {
@@ -1768,7 +1769,7 @@ limitations under the License.
             <div id="mca-toolbar">
               <div class="left">
                   <a id="enableacq" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set/Stop data acquisition"><i style="line-height:inherit" class="material-icons right">play_arrow</i>Start</a>
-                <a id="cleartimer" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition time"><i style="line-height:inherit" class="material-icons center">timer</i></a>
+                <a id="cleartimer" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition time"><i style="line-height:inherit" class="material-icons center">restore</i></a>
                 <a id="cleardata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition data and time"><i style="line-height:inherit" class="material-icons center">delete</i></a>
               </div>
               <div class="right">
@@ -1790,8 +1791,8 @@ limitations under the License.
           </nav>
           <div id="mca-container">
             <div id="cursor-panel">
-              Cursor ......... : <span id="cursor"></span>
-              Counts ......... : <span id="counts"></span>
+              Cursor ......... : <span id="cursor">0</span>
+              Counts ......... : <span id="counts">0</span>
               Acq. Time (s) .. : <span id="acqtime_s"></span>
               Elapsed Time (s) : <span id="elapsedtime"></span>
               ROI #1 ......... : <span id="roi1_counts"></span>
