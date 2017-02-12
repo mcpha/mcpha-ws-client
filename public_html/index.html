@@ -25,6 +25,7 @@ limitations under the License.
     <!-- CSS  -->
     <link href="css/material-icons.css" rel="stylesheet">
     <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen"/>
+    <link href="css/animate.css" type="text/css" rel="stylesheet" media="screen"/>
     <link href="css/style.css" type="text/css" rel="stylesheet" media="screen"/>
   </head>
   <body>
@@ -54,12 +55,24 @@ limitations under the License.
       const MCPHA_MCA_1_TRIG_SOURCE = "mcpha_mca_1_trig_source";
       const MCPHA_MCA_1_TRIG_EDGE = "mcpha_mca_1_trig_edge";
       const MCPHA_MCA_1_TRIG_LEVEL = "mcpha_mca_1_trig_level";
+      const MCPHA_MCA_1_ROI_1_START = "mcpha_mca_1_roi1_start";
+      const MCPHA_MCA_1_ROI_1_END = "mcpha_mca_1_roi1_end";
+      const MCPHA_MCA_1_ROI_2_START = "mcpha_mca_1_roi2_start";
+      const MCPHA_MCA_1_ROI_2_END = "mcpha_mca_1_roi2_end";
+      const MCPHA_MCA_1_ROI_3_START = "mcpha_mca_1_roi3_start";
+      const MCPHA_MCA_1_ROI_3_END = "mcpha_mca_1_roi3_end";
       const MCPHA_MCA_2_IN_NEG = "mcpha_mca_2_in_neg";
       const MCPHA_MCA_2_ACQ_TIME = "mcpha_mca_2_acq_time";
       const MCPHA_MCA_2_TRIG_MODE = "mcpha_mca_2_trig_mode";
       const MCPHA_MCA_2_TRIG_SOURCE = "mcpha_mca_2_trig_source";
       const MCPHA_MCA_2_TRIG_EDGE = "mcpha_mca_2_trig_edge";
       const MCPHA_MCA_2_TRIG_LEVEL = "mcpha_mca_2_trig_level";
+      const MCPHA_MCA_2_ROI_1_START = "mcpha_mca_2_roi1_start";
+      const MCPHA_MCA_2_ROI_1_END = "mcpha_mca_2_roi1_end";
+      const MCPHA_MCA_2_ROI_2_START = "mcpha_mca_2_roi2_start";
+      const MCPHA_MCA_2_ROI_2_END = "mcpha_mca_2_roi2_end";
+      const MCPHA_MCA_2_ROI_3_START = "mcpha_mca_2_roi3_start";
+      const MCPHA_MCA_2_ROI_3_END = "mcpha_mca_2_roi3_end";
       const MCPHA_OSC_1_IN = "mcpha_osc_1_in";
       const MCPHA_OSC_1_IN_NEG = "mcpha_osc_1_in_neg";
       const MCPHA_OSC_2_IN = "mcpha_osc_2_in";
@@ -173,9 +186,10 @@ limitations under the License.
 
         // MCA chartist and options
         var chart;
-        var mca1_timer = null, mca1_acqtime = 0, mca2_timer = null, mca2_acqtime = 0;
-        var mca1_data = [], mca1_options, mca1_cursor_mode, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
-        var mca2_data = [], mca2_options, mca2_cursor_mode, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
+        var mca1_timer = null, mca1_acqtime = 0, mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
+        var mca1_data = [], mca1_options, mca1_cursor_mode = null, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
+        var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
+        var mca2_data = [], mca2_options, mca2_cursor_mode = null, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var osc_data = [], osc_options, osc_cursor_mode;
         var mca1_acq = false, mca2_acq = false;
         
@@ -186,27 +200,12 @@ limitations under the License.
 
 
         //
-        // Resize div element that chart is bound to
+        // Redraw chart to resize div element that chart is bound to
         //
         function resize_chart_div() {
-          // resize mca chart to fill div
-          var lpad = parseInt($("#mca-chart").css("padding-left"), 10);
-          var rpad = parseInt($("#mca-chart").css("padding-right"), 10);
-          var tpad = parseInt($("#mca-chart").css("padding-top"), 10);
-          var bpad = parseInt($("#mca-chart").css("padding-bottom"), 10);
-          var w = Math.floor($("#slide-body").width()) - (lpad + rpad); // less padding
-          var h = Math.floor($("#slide-body").height()) - (tpad + bpad + 64); // less padding
-          // regenerate the chart
-          $("#mca-chart").width(w);
-          $("#mca-chart").height(h);
-
           update_chart();
-//          mca1_options.points.show = true;
-//          mca1_options.grid.backgroundColor = "#fff";
-//          
-//          chart = $.plot("#mca-chart", [[0, 30], [400, 80], [800, 50], [9000, 90]], mca1_options);
         }
-
+        
         //
         // Return a text string representing the device connection status
         //
@@ -333,8 +332,20 @@ limitations under the License.
               } else if (r === 2) {
                 var data = new Uint32Array(e.data, 4);
                 mca1_data.length = 0;
+                mca1_rois[0].count = 0;
+                mca1_rois[0].data.length = 0;
+                mca1_rois[1].count = 0;
+                mca1_rois[1].data.length = 0;
+                mca1_rois[2].count = 0;
+                mca1_rois[2].data.length = 0;
                 for (let entry of data.entries()) {
                   mca1_data.push(entry);
+                  for (let r of mca1_rois) {
+                    if (entry[0] >= r.start && entry[0] <=r.end) {
+                      r.data.push(entry);
+                      r.count += entry[1];
+                    }
+                  }
                 }
                 if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
                   update_chart();
@@ -350,10 +361,10 @@ limitations under the License.
                 }
               } else if (r === 4) {
                 var status = new Uint32Array(e.data, 4)[0];
-                console.log("status: ", status);
+                console.log("device status: ", status);
               } else if (r === 5) {
                 var data = new Uint16Array(e.data, 4);
-                console.log("scope length: ", data.length);
+                console.log("oscilloscope length: ", data.length);
                 var chan1 = [];
                 var chan2 = [];
                 for (let entry of data.entries()) {
@@ -365,7 +376,6 @@ limitations under the License.
                     chan1.push(entry);
                   }
                 }
-                //$.plot($("#placeholder"), [chan1, chan2]);
               }
             }
           };
@@ -397,7 +407,7 @@ limitations under the License.
             dataInt[1] = chan;
             dataFloat[0] = data;
             wsock.send(buffer, {binary: true});
-            console.log("code:" + code + ", chan:" + chan + ", data:" + data);
+console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           }
         }
 
@@ -455,7 +465,7 @@ limitations under the License.
               interactive: false
             },
             selection: {
-              mode: "x"
+              mode: null
             }
           };
         }
@@ -463,13 +473,14 @@ limitations under the License.
         function init_chart_handlers() {
           // set initial elapsedtime
           $("#mca-chart").bind("plotclick", function (event, pos, item) {
-            if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === "mca-1") {
               if (mca1_cursor_mode === CURSOR_MODE_ZOOMIN) {
                 zoom_in_around_cursor_xpos(pos.x.toFixed(0), mca1_data, chart.getAxes(), mca1_options, true);
               } else if (mca1_cursor_mode === CURSOR_MODE_ZOOMOUT) {
                 zoom_out_around_cursor_xpos(pos.x.toFixed(0), mca1_data, chart.getAxes(), mca1_options, true);
               }
-            } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
+            } else if (tab === "mca-2") {
               if (mca2_cursor_mode === CURSOR_MODE_ZOOMIN) {
                 zoom_in_around_cursor_xpos(pos.x.toFixed(0), mca2_data, chart.getAxes(), mca2_options, true);
               } else if (mca2_cursor_mode === CURSOR_MODE_ZOOMOUT) {
@@ -510,20 +521,45 @@ limitations under the License.
           // ROI selection handler
           //
           $("#mca-chart").bind("plotselected", function (event, ranges) {
-            console.log("roi selection - start:"+ranges.xaxis.from.toFixed(0)+" to "+ranges.xaxis.to.toFixed(0));
-            /**
-            if (roi2set !== "") {
-              ws.send("{\"type\":\"req\",\"command\":\"set_roi\",\"roi\":"+
-                      roi2set+",\"from\":"+ranges.xaxis.from.toFixed(0)+",\"to\":"+
-                      ranges.xaxis.to.toFixed(0)+"}");
-              $("#roi"+roi2set).removeClass("current-roi");
-              plot.clearSelection();
-            }
-              ***/
-             chart.clearSelection();
+            // save roi range
+            save_roi_range(ranges.xaxis.from.toFixed(0), ranges.xaxis.to.toFixed(0));
+            chart.clearSelection();
+            set_cursor_mode(CURSOR_MODE_CLEAR_ALL);
+            update_chart();
           });
         }
 
+        //
+        //
+        //
+        function save_roi_range(from, to) {
+          var roi = parseInt(mca1_cursor_mode.charAt(1));
+          var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+          if (tab === "mca-1") {
+            var r = mca1_rois[roi-1];
+            r.start = from;
+            r.end = to;
+            r.count = 0;
+            r.data.length = 0;
+            for (var n=r.start; n<r.end; n++) {
+              r.data.push(mca1_data[n]);
+              r.count += parseInt(mca1_data[n][1]);
+            }
+          } else if (tab === "mca-2") {
+            var r = mca2_rois[roi-1];
+            r.start = from;
+            r.end = to;
+            r.count = 0;
+            r.data.length = 0;
+            for (var n=r.start; n<r.end; n++) {
+              r.data.push(mca2_data[n]);
+              r.count += parseInt(mca2_data[n][1]);
+            }
+          }
+          // update roi tooltip
+          $("#roi"+roi+"_counts").prop("title", "From channel "+from+" to "+to);
+        }
+        
         //
         //
         //
@@ -676,22 +712,24 @@ limitations under the License.
         //
         //
         function set_cursor_mode(mode) {
-          console.log("set cursor mode:" + mode);
-          if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
-            mca1_cursor_mode = set_cursor_mode_options(mode, mca1_options, mca1_cursor_mode);
-          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
-            mca2_cursor_mode, set_cursor_mode_options(mode, mca2_options, mca2_cursor_mode);
-          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
-            osc_cursor_mode = set_cursor_mode_options(mode, osc_options, osc_cursor_mode);
+          var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+          if (tab === "mca-1") {
+            return (mca1_cursor_mode = set_cursor_mode_options(mode, mca1_cursor_mode, mca1_options));
+          } else if (tab === "mca-2") {
+            return (mca2_cursor_mode, set_cursor_mode_options(mode, mca2_cursor_mode, mca2_options));
+          } else if (tab === "osc") {
+            return (osc_cursor_mode = set_cursor_mode_options(mode, osc_cursor_mode, osc_options));
           }
+          return null;
         }
 
         //
         //
         //
-        function set_cursor_mode_options(mode, options, current_mode) {
+        function set_cursor_mode_options(mode, current_mode, options) {
           $("#zoomin").removeClass("darken-2");
           if (mode === CURSOR_MODE_ZOOMIN) {
+            options.selection.mode = null;
             if (current_mode === mode) {
               $("#zoomin").removeClass("darken-2");
               log_status_message("ZOOM mode OFF", true);
@@ -703,6 +741,7 @@ limitations under the License.
               return mode;
             }
           } else if (mode === CURSOR_MODE_ZOOMOUT) {
+            options.selection.mode = null;
             if (current_mode === mode) {
               $("#zoomout").removeClass("darken-2");
               log_status_message("ZOOM mode OFF", true);
@@ -716,127 +755,53 @@ limitations under the License.
           } else if (mode === CURSOR_MODE_SETROI_1) {
             if (current_mode === mode) {
               $("#roi1").removeClass("darken-2");
+              options.selection.mode = null;
               log_status_message("Set ROI #1 mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
               $("#roi2").removeClass("darken-2");
               $("#roi3").removeClass("darken-2");
               $("#roi1").addClass("darken-2");
+              options.selection.mode = "x";
               log_status_message("Set ROI #1 mode ON", true);
               return mode;
             }
           } else if (mode === CURSOR_MODE_SETROI_2) {
             if (current_mode === mode) {
               $("#roi2").removeClass("darken-2");
+              options.selection.mode = null;
               log_status_message("Set ROI #2 mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
               $("#roi1").removeClass("darken-2");
               $("#roi3").removeClass("darken-2");
               $("#roi2").addClass("darken-2");
+              options.selection.mode = "x";
               log_status_message("Set ROI #2 mode ON", true);
               return mode;
             }
           } else if (mode === CURSOR_MODE_SETROI_3) {
             if (current_mode === mode) {
               $("#roi3").removeClass("darken-2");
+              options.selection.mode = null;
               log_status_message("Set ROI #1 mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
               $("#roi1").removeClass("darken-2");
               $("#roi2").removeClass("darken-2");
               $("#roi3").addClass("darken-2");
+              options.selection.mode = "x";
               log_status_message("Set ROI #3 mode ON", true);
               return mode;
             }
-          } else if (mode === "cleartimer") {
-            ////////////////////////////////////////////////////////////////////////////////
-            ////////////////////////////////////////////////////////////////////////////////
-            ////////////////////////////////////////////////////////////////////////////////
-            // first clear any roiset modes
-            if (roi2set !== "") {
-              $("#roi" + roi2set).removeClass("current-roi");
-              roi2set = "";
-              options.selection.mode = null;
-              replot(options);
-            }
-            // now clear any zoomin mode
-            if (zoom_mode !== "") {
-              $("button.zoom-in-button").removeClass("current-zoom");
-              zoom_mode = "";
-            }
-            // now clear pan button
-            if (pan_mode !== "") {
-              $("button.pan-button").removeClass("current-zoom");
-              pan_mode = "";
-              options.pan.interactive = false;
-              replot(options);
-            }
-          } else if (mode === "pan") {
-            // first clear any roiset modes
-            if (roi2set !== "") {
-              $("#roi" + roi2set).removeClass("current-roi");
-              roi2set = "";
-              options.selection.mode = null;
-            }
-            // now clear any zoomin mode
-            if (zoom_mode !== "") {
-              $("button.zoom-in-button").removeClass("current-zoom");
-              zoom_mode = "";
-            }
-            // now set pan mode
-            $("button.pan-button").addClass("current-zoom");
-            pan_mode = "pan";
-            options.pan.interactive = true;
-            replot(options);
-            $.notify("Pan spectrum region using mouse.", "info");
-          } else if (mode === "zoomin") {
-            // first clear any roiset modes
-            if (roi2set !== "") {
-              $("#roi" + roi2set).removeClass("current-roi");
-              roi2set = "";
-              options.selection.mode = null;
-              replot(options);
-            }
-            // now clear pan button
-            if (pan_mode !== "") {
-              $("button.pan-button").removeClass("current-zoom");
-              pan_mode = "";
-              options.pan.interactive = false;
-              replot(options);
-            }
-            // now set zoomin mode
-            if (zoom_mode === "") {
-              $("button.zoom-in-button").addClass("current-zoom");
-              zoom_mode = mode;
-            }
-            $.notify("Select spectrum region using mouse.", "info");
-          } else if (mode === "roi2set") {
-            if (acquiring) {
-              $.notify("Cannot set ROI while acquiring spectra.", "info");
-            } else {
-              // first clear any zoomin mode
-              if (zoom_mode !== "") {
-                $("button.zoom-in-button").removeClass("current-zoom");
-                zoom_mode = "";
-              }
-              // now clear pan button
-              if (pan_mode !== "") {
-                $("button.pan-button").removeClass("current-zoom");
-                pan_mode = "";
-                options.pan.interactive = false;
-              }
-              // now set roiset mode
-              if (roi2set !== "") {
-                $("#roi" + roi2set).removeClass("current-roi");
-                roi2set = "";
-              }
-              roi2set = param;
-              options.selection.mode = "x";
-              replot(options);
-              $("#roi" + param).addClass("current-roi");
-              $.notify("Select ROI #" + param + " region using mouse.", "info");
-            }
+          } else if (mode === CURSOR_MODE_CLEAR_ALL) {
+            $("#roi1").removeClass("darken-2");
+            $("#roi2").removeClass("darken-2");
+            $("#roi3").removeClass("darken-2");
+            $("#zoomin").removeClass("darken-2");
+            $("#zoomout").removeClass("darken-2");
+            options.selection.mode = null;
+            return mode;
           }
         }
 
@@ -844,11 +809,28 @@ limitations under the License.
         //
         //
         function update_chart() {
-          if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
-            chart = $.plot("#mca-chart", [mca1_data], mca1_options);
-          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
-            chart = $.plot("#mca-chart", [mca2_data], mca2_options);
-          } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
+          var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+          if (tab === "mca-1") {
+            chart = $.plot("#mca-chart",
+                           [mca1_data,
+                           {data:mca1_rois[0].data, color:"#a22"},
+                           {data:mca1_rois[1].data, color:"#a22"},
+                           {data:mca1_rois[2].data, color:"#a22"}],
+                           mca1_options);
+            $("#roi1_counts").text(mca1_rois[0].count);
+            $("#roi2_counts").text(mca1_rois[1].count);
+            $("#roi3_counts").text(mca1_rois[2].count);
+          } else if (tab === "mca-2") {
+            chart = $.plot("#mca-chart",
+                           [mca2_data,
+                           {data:mca2_rois[0].data, color:"#a22"},
+                           {data:mca2_rois[1].data, color:"#a22"},
+                           {data:mca2_rois[2].data, color:"#a22"}],
+                           mca2_options);
+            $("#roi1_counts").text(mca2_rois[0].count);
+            $("#roi2_counts").text(mca2_rois[1].count);
+            $("#roi3_counts").text(mca2_rois[2].count);
+          } else if (tab === "osc") {
 
           }
         }
@@ -1018,6 +1000,15 @@ limitations under the License.
         function update_mca_acquisition_buttons_text(active) {
           //$('#enableacq').text(mca ? "Stop" : "Start");
           $('#enableacq').html(active ? STOP_ACQUISITION_TEXT : START_ACQUISITION_TEXT);
+          if (active) {
+            $('#net-traffic').addClass("infinite");
+            $('#net-traffic').addClass("white-text");
+            log_status_message("Starting acquisition", true);
+          } else {
+            $('#net-traffic').removeClass("infinite");
+            $('#net-traffic').removeClass("white-text");
+            log_status_message("Stopping acquisition", true);
+          }
         }
         
         //
@@ -1056,8 +1047,9 @@ limitations under the License.
         //
         function log_status_message(msg, onscreen) {
           if (onscreen !== 'undefined' && onscreen !== null && onscreen) {
-            Materialize.toast(msg, TOAST_DELAY);
+            Materialize.toast(msg, TOAST_DELAY, 'toast-css');
           }
+          // add to log element
           $("<p>" + msg + "</p>").appendTo('#messages');
         }
 
@@ -1160,7 +1152,6 @@ limitations under the License.
             $("#acqtime_s").text($('#' + MCPHA_MCA_1_ACQ_TIME).val());
           });
           s = localStorage.getItem(MCPHA_MCA_1_ACQ_TIME);
-          console.log("->"+s);
           if (s !== null && s !== 'undefined') {
             $('#' + MCPHA_MCA_1_ACQ_TIME).val(s);
           } else {
@@ -1538,12 +1529,11 @@ limitations under the License.
           // ROI 1 button
           $('#roi1').on('click', function (e) {
             var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
-            if (set_cursor_mode(CURSOR_MODE_SETROI_1) === CURSOR_MODE_SETROI_1) {
-              if (tab === 'mca-1') {
-                mca1_options.selection.mode = "x";
-              } else if (tab === 'mca-2') {
-                mca2_options.selection.mode = "x";
-              }
+            if ((tab === "mca-1" && mca1_acq) || (tab === "mca-2" && mca2_acq)) {
+              log_status_message("Cannot set ROI region while acquiring spectrum.", true);
+              return;
+            } else {
+              set_cursor_mode(CURSOR_MODE_SETROI_1);
               update_chart();
             }
           });
@@ -1551,12 +1541,11 @@ limitations under the License.
           // ROI 2 button
           $('#roi2').on('click', function (e) {
             var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
-            if (set_cursor_mode(CURSOR_MODE_SETROI_2) === CURSOR_MODE_SETROI_2) {
-              if (tab === 'mca-1') {
-                mca1_options.selection.mode = "x";
-              } else if (tab === 'mca-2') {
-                mca2_options.selection.mode = "x";
-              }
+            if ((tab === "mca-1" && mca1_acq) || (tab === "mca-2" && mca2_acq)) {
+              log_status_message("Cannot set ROI region while acquiring spectrum.", true);
+              return;
+            } else {
+              set_cursor_mode(CURSOR_MODE_SETROI_2);
               update_chart();
             }
           });
@@ -1564,12 +1553,11 @@ limitations under the License.
           // ROI 3 button
           $('#roi3').on('click', function (e) {
             var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
-            if (set_cursor_mode(CURSOR_MODE_SETROI_3) === CURSOR_MODE_SETROI_3) {
-              if (tab === 'mca-1') {
-                mca1_options.selection.mode = "x";
-              } else if (tab === 'mca-2') {
-                mca2_options.selection.mode = "x";
-              }
+            if ((tab === "mca-1" && mca1_acq) || (tab === "mca-2" && mca2_acq)) {
+              log_status_message("Cannot set ROI region while acquiring spectrum.", true);
+              return;
+            } else {
+              set_cursor_mode(CURSOR_MODE_SETROI_3);
               update_chart();
             }
           });
@@ -1922,7 +1910,7 @@ limitations under the License.
     <footer class="page-footer brown darken-2">
       <div>
         <div class="right">
-          <div class="net-traffic" title="Network traffic."><i class="small material-icons">swap_horiz</i></div>
+          <div class="net-traffic brown-text lighten-4" title="Network traffic."><i id="net-traffic" class="small material-icons flash animated">swap_horiz</i></div>
           <div class="device-connection"><i id="device-connection" class="small material-icons">signal_cellular_null</i></div>
         </div>
       </div>
