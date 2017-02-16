@@ -379,6 +379,17 @@ main {
   font-size: medium;
 }
 
+#osc-chart {
+  padding: 20px;
+  width: 100%;
+  height: calc(100% - 50px);
+  max-width: 100%;
+}
+
+#osc-chart .flot-tick-label {
+  font-size: medium;
+}
+
 .selectedtab {
   opacity: 0.5;
 }

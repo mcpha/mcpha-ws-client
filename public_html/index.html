@@ -187,10 +187,10 @@ limitations under the License.
         // MCA chartist and options
         var chart;
         var mca1_timer = null, mca1_acqtime = 0, mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
-        var mca1_data = [], mca1_options, mca1_cursor_mode = null, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
+        var mca1_data = [[0, 0], [16384, 0]], mca1_options = null, mca1_cursor_mode = null, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
-        var mca2_data = [], mca2_options, mca2_cursor_mode = null, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
-        var osc_data = [], osc_options, osc_cursor_mode;
+        var mca2_data = [[0, 0], [16384, 0]], mca2_options = null, mca2_cursor_mode = null, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
+        var osc1_data = [[0, 0], [16384, 0]], osc2_data = [], osc_options = null, osc_cursor_mode;
         var mca1_acq = false, mca2_acq = false;
         
         // window resized handler
@@ -325,9 +325,13 @@ limitations under the License.
               } else if (r === 1) {
                 var data = new Uint32Array(e.data, 4);
                 var timer2 = data[1] * 4294967296 + data[0];
-                console.log("timer2: ", timer2);
                 if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
-                  update_chart();
+                  $("#elapsedtime").text((timer2 / TIMER_FREQ).toFixed(1));
+                }
+                if (timer2 >= mca2_acqtime && mca2_timer !== null) {
+                  clearInterval(mca2_timer);
+                  mca2_acq = false;
+                  update_mca_acquisition_buttons_text(mca2_acq);
                 }
               } else if (r === 2) {
                 var data = new Uint32Array(e.data, 4);
@@ -347,35 +351,44 @@ limitations under the License.
                     }
                   }
                 }
-                if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
-                  update_chart();
-                }
+                update_mca1_chart();
               } else if (r === 3) {
-                var data = new Uint32Array(evt.data, 4);
+                var data = new Uint32Array(e.data, 4);
                 mca2_data.length = 0;
+                mca2_rois[0].count = 0;
+                mca2_rois[0].data.length = 0;
+                mca2_rois[1].count = 0;
+                mca2_rois[1].data.length = 0;
+                mca2_rois[2].count = 0;
+                mca2_rois[2].data.length = 0;
                 for (let entry of data.entries()) {
                   mca2_data.push(entry);
+                  for (let r of mca2_rois) {
+                    if (entry[0] >= r.start && entry[0] <=r.end) {
+                      r.data.push(entry);
+                      r.count += entry[1];
+                    }
+                  }
                 }
-                if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
-                  update_chart();
-                }
+                update_mca2_chart();
               } else if (r === 4) {
                 var status = new Uint32Array(e.data, 4)[0];
                 console.log("device status: ", status);
               } else if (r === 5) {
                 var data = new Uint16Array(e.data, 4);
                 console.log("oscilloscope length: ", data.length);
-                var chan1 = [];
-                var chan2 = [];
+                osc1_data.length = 0;
+                osc2_data.length = 0;
                 for (let entry of data.entries()) {
                   if (entry[0] % 2) {
                     entry[0] /= 2;
-                    chan2.push(entry);
+                    osc2_data.push(entry);
                   } else {
                     entry[0] /= 2;
-                    chan1.push(entry);
+                    osc1_data.push(entry);
                   }
                 }
+                update_osc_chart();
               }
             }
           };
@@ -415,6 +428,65 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
         // Initial mca chart options
         //
         function default_mca_chart_options() {
+          return {
+            lines: {
+              show: true,
+              steps: true
+            },
+            points: {
+              show: false
+            },
+            xaxis: {
+              panRange: false,
+              tickDecimals: 0,
+              tickSize: 1000,
+              min: 0,
+              max: 16384,
+              transform: function (x) {
+                return x;
+              }
+            },
+            yaxis: {
+              panRange: false,
+              labelWidth: 140,
+              reserveSpace: true,
+              position: "right",
+              max: 100,
+              min: 0,
+              ticks: null, //[0.1,1,10,100,1000],
+              transform: null//function(v) {
+                //  return Math.log(v+0.0001); /*move away from zero*/
+                //},
+                //tickDecimals: 3,
+                //tickFormatter: function (v, axis) {
+                //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
+                //}
+            },
+            grid: {
+              backgroundColor: "#999",
+              hoverable: true,
+              clickable: true,
+              autoHighlight: false
+            },
+            crosshair: {
+              mode: "x"
+            },
+            zoom: {
+              interactive: true
+            },
+            pan: {
+              interactive: false
+            },
+            selection: {
+              mode: null
+            }
+          };
+        }
+
+        //
+        // Initial mca chart options
+        //
+        function default_osc_chart_options() {
           return {
             lines: {
               show: true,
@@ -808,9 +880,39 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
         //
         //
         //
+        function update_mca1_chart() {
+          if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
+            update_chart();
+          }
+        }
+
+        //
+        //
+        //
+        function update_mca2_chart() {
+          if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
+            update_chart();
+          }
+        }
+
+        //
+        //
+        //
+        function update_osc_chart() {
+          if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'osc') {
+            update_chart();
+          }
+        }
+        
+        //
+        //
+        //
         function update_chart() {
           var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
           if (tab === "mca-1") {
+            if (mca1_options === null) {
+                mca1_options = default_mca_chart_options();
+            }
             chart = $.plot("#mca-chart",
                            [mca1_data,
                            {data:mca1_rois[0].data, color:"#a22"},
@@ -821,6 +923,9 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             $("#roi2_counts").text(mca1_rois[1].count);
             $("#roi3_counts").text(mca1_rois[2].count);
           } else if (tab === "mca-2") {
+            if (mca2_options === null) {
+                mca2_options = default_mca_chart_options();
+            }
             chart = $.plot("#mca-chart",
                            [mca2_data,
                            {data:mca2_rois[0].data, color:"#a22"},
@@ -831,7 +936,10 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             $("#roi2_counts").text(mca2_rois[1].count);
             $("#roi3_counts").text(mca2_rois[2].count);
           } else if (tab === "osc") {
-
+            if (osc_options === null) {
+                osc_options = default_osc_chart_options();
+            }
+            chart = $.plot("#osc-chart", [osc1_data,osc2_data], osc_options);
           }
         }
 
@@ -884,13 +992,14 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           localStorage.setItem(MCPHA_SELECTED_TAB, tab);
           // hide unselected tabs and show selected tab
           if (tab === "mca-1" || tab === null) {
-            // unhide sidebar
+            // hide/unhide relevant sidebar
             $('#mca-1-sidebar').css('display', 'inline');
             $('#mca-2-sidebar').css('display', 'none');
             $('#osc-sidebar').css('display', 'none');
             $('#log-sidebar').css('display', 'none');
             // show relevant container
             $('#mca-toolbar').css('display', 'inline');
+            $('#osc-toolbar').css('display', 'none');
             $('#mca-container').css('display', 'inline');
             $('#osc-container').css('display', 'none');
             $('#log-container').css('display', 'none');
@@ -902,13 +1011,14 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             // update cursor panel
             $("#acqtime_s").text(localStorage.getItem(MCPHA_MCA_1_ACQ_TIME));
           } else if (tab === "mca-2") {
-            // unhide sidebar
+            // hine/unhide relevant sidebar
             $('#mca-1-sidebar').css('display', 'none');
             $('#mca-2-sidebar').css('display', 'inline');
             $('#osc-sidebar').css('display', 'none');
             $('#log-sidebar').css('display', 'none');
             // show relevant container
             $('#mca-toolbar').css('display', 'inline');
+            $('#osc-toolbar').css('display', 'none');
             $('#mca-container').css('display', 'inline');
             $('#osc-container').css('display', 'none');
             $('#log-container').css('display', 'none');
@@ -920,13 +1030,14 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             // update cursor panel
             $("#acqtime_s").text(localStorage.getItem(MCPHA_MCA_2_ACQ_TIME));
           } else if (tab === "osc") {
-            // unhide sidebar
+            // hine/unhide relevant sidebar
             $('#mca-1-sidebar').css('display', 'none');
             $('#mca-2-sidebar').css('display', 'none');
             $('#osc-sidebar').css('display', 'inline');
             $('#log-sidebar').css('display', 'none');
             // show relevant container
             $('#mca-toolbar').css('display', 'none');
+            $('#osc-toolbar').css('display', 'inline');
             $('#mca-container').css('display', 'none');
             $('#osc-container').css('display', 'inline');
             $('#log-container').css('display', 'none');
@@ -936,13 +1047,14 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             $('#osc').addClass("selectedtab");
             $('#log').removeClass("selectedtab");
           } else if (tab === "log") {
-            // unhide sidebar
+            // hine/unhide relevant sidebar
             $('#mca-1-sidebar').css('display', 'none');
             $('#mca-2-sidebar').css('display', 'none');
             $('#osc-sidebar').css('display', 'none');
             $('#log-sidebar').css('display', 'inline');
             // show relevant container
             $('#mca-toolbar').css('display', 'none');
+            $('#osc-toolbar').css('display', 'none');
             $('#mca-container').css('display', 'none');
             $('#osc-container').css('display', 'none');
             $('#log-container').css('display', 'inline');
@@ -991,6 +1103,13 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             }
           } else if (tab === "log") {
           } else if (tab === "osc") {
+            if (enable) {
+              $('#getoscdata').removeClass('disabled');
+              $('#clearoscdata').removeClass('disabled');
+            } else {
+              $('#getoscdata').addClass('disabled');
+              $('#clearoscdata').addClass('disabled');
+            }
           }
         }
 
@@ -1561,6 +1680,11 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
               update_chart();
             }
           });
+          
+          $('#getoscdata').on('click', function (e) {
+            // Get oscilloscope data
+            mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA, 0, parseInt(localStorage.getItem(MCPHA_MCA_LLD)));
+          });
         }
 
         //
@@ -1628,12 +1752,6 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           wsock = init_websocket(wsock);
         }
 
-        mca1_options = default_mca_chart_options();
-
-        mca2_options = default_mca_chart_options();
-
-        chart = $.plot("#mca-chart", [[0, 0], [16384, 0]], mca1_options);
-
         // install browser window resize handler
         window.addEventListener('resize', resize_handler);
         // resize chart to fit browser window
@@ -1674,7 +1792,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           <form>
             <div class="valign-wrapper">
               <div class="s6 input-field">
-                <label>Device IP Address</label>
+                <label>Device IP Address[:port]</label>
                 <input type="text" id="mcpha_device_addr" value="0.0.0.0">
               </div>
               <div class="switch s6">
@@ -1862,7 +1980,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           <nav class="gray spacer10 no-shadow">
             <div id="mca-toolbar">
               <div class="left">
-                  <a id="enableacq" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set/Stop data acquisition"><i style="line-height:inherit" class="material-icons right">play_arrow</i>Start</a>
+                <a id="enableacq" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set/Stop data acquisition"><i style="line-height:inherit" class="material-icons right">play_arrow</i>Start</a>
                 <a id="cleartimer" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition time"><i style="line-height:inherit" class="material-icons center">restore</i></a>
                 <a id="cleardata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition data and time"><i style="line-height:inherit" class="material-icons center">delete</i></a>
               </div>
@@ -1882,6 +2000,12 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
                   <a id="download" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Download data"><i  style="line-height:inherit" class="material-icons">file_download</i></a>
               </div>
             </div>
+            <div id="osc-toolbar">
+              <div class="left">
+                <a id="getoscdata" class="btn waves-effect waves-light orange lighten-4 disabled" title="Get oscilloscope data."><i style="line-height:inherit" class="material-icons right">play_arrow</i>Start</a>
+                <a id="clearoscdata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear oscilloscope data."><i style="line-height:inherit" class="material-icons center">delete</i></a>
+              </div>
+            </div>
           </nav>
           <div id="mca-container">
             <div id="cursor-panel">
@@ -1896,12 +2020,10 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             <div id="mca-chart"></div>
           </div>
           <div id="osc-container">
-            OSCILLOSCOPE
+            <div id="osc-chart"></div>
           </div>
           <div id="log-container">
-            <div id="messages">
-
-            </div>
+            <div id="messages"></div>
           </div>
         </div>
       </div>
