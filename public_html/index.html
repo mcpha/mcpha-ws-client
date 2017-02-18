@@ -36,13 +36,14 @@ limitations under the License.
     <script type="text/javascript" src="js/long.js"></script>
     <script type="text/javascript" src="js/jquery.flot.min.js"></script>
     <script type="text/javascript" src="js/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="js/jquery.flot.crosshair.min.js"></script>
     <script type="text/javascript" src="js/download.js"></script>
 
     <script type="text/javascript">
       const START_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>play_arrow</i>Start";
       const STOP_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>stop</i>Stop";
       const GET_OSCILLOSCOPE_DATA_TEXT = "<i style='line-height:inherit' class='material-icons right'>play_arrow</i>Get Oscilloscope Data";
-      const CANCEL_OSCILLOSCOPE_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>stop</i>Cancel";
+      const CANCEL_OSCILLOSCOPE_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>stop</i>Cancel Oscilloscope Data";
       
       const DEVICE_CONNECTION = "device-connection";
 
@@ -90,6 +91,7 @@ limitations under the License.
       const WEBSOCKET_DISCONNECTED = 3;
       const WEBSOCKET_ERROR = 4;
 
+      const OSC_UNIT_DATA_VOLT = 10.0 / 32768.0;
       const TIMER_FREQ = 125000000.0;
       const TIME_PER_TICK = 1.0 / TIMER_FREQ;
       const SHIFT_CODE = 56;
@@ -392,10 +394,12 @@ limitations under the License.
                 console.log("oscilloscope length: ", data.length);
                 osc1_data.length = 0;
                 osc2_data.length = 0;
-                var n0 = 0, n1 = 0;
                 for (var i=0; i<data.length; i+=2) {
-                  osc1_data.push([n0++,data[i]]);
-                  osc2_data.push([n1++,data[i]]);
+                  var n = i / 2;
+                  var v = OSC_UNIT_DATA_VOLT * data[i];
+                  osc1_data.push([n, v]);
+                  v = OSC_UNIT_DATA_VOLT * data[i+1];
+                  osc2_data.push([n, v]);
                 }
                 update_osc_chart();
               }
