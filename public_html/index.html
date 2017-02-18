@@ -41,6 +41,8 @@ limitations under the License.
     <script type="text/javascript">
       const START_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>play_arrow</i>Start";
       const STOP_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>stop</i>Stop";
+      const GET_OSCILLOSCOPE_DATA_TEXT = "<i style='line-height:inherit' class='material-icons right'>play_arrow</i>Get Oscilloscope Data";
+      const CANCEL_OSCILLOSCOPE_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>stop</i>Cancel";
       
       const DEVICE_CONNECTION = "device-connection";
 
@@ -446,7 +448,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             xaxis: {
               panRange: false,
               tickDecimals: 0,
-              tickSize: 1000,
+              tickSize: 2000,
               min: 0,
               max: 16384,
               transform: function (x) {
@@ -1078,6 +1080,13 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             $('#osc').removeClass("selectedtab");
             $('#log').addClass("selectedtab");
           }
+          // if websocket connection establed then we enable toolbar buttons
+          if (wsock !== null) {console.log("readystate="+wsock.readyState);}
+          if (wsock !== null && wsock.readyState === 1) {
+            // update toolbar buttons
+            update_toolbar_buttons(true);
+            update_chart();
+          }
         }
 
         //
@@ -1119,10 +1128,8 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           } else if (tab === "osc") {
             if (enable) {
               $('#getoscdata').removeClass('disabled');
-              $('#clearoscdata').removeClass('disabled');
             } else {
               $('#getoscdata').addClass('disabled');
-              $('#clearoscdata').addClass('disabled');
             }
           }
         }
@@ -1147,7 +1154,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
         //
         //
         function update_osc_acquisition_buttons_text(active) {
-          $('#getoscdata').html(active ? STOP_ACQUISITION_TEXT : START_ACQUISITION_TEXT);
+          $('#getoscdata').html(active ? CANCEL_OSCILLOSCOPE_ACQUISITION_TEXT : GET_OSCILLOSCOPE_DATA_TEXT);
           if (active) {
             $('#net-traffic').addClass("infinite");
             $('#net-traffic').addClass("white-text");
@@ -2016,9 +2023,9 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
                 <a id="cleardata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition data and time"><i style="line-height:inherit" class="material-icons center">delete</i></a>
               </div>
               <div class="right">
-                  <a id="roi1" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #1"><i style="line-height:inherit" class="material-icons right">looks_one</i>ROI</a>
-                  <a id="roi2" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
-                  <a id="roi3" class="btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
+                  <a id="roi1" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #1"><i style="line-height:inherit" class="material-icons right">looks_one</i>ROI</a>
+                  <a id="roi2" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
+                  <a id="roi3" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
                   <div style="width: 10px; display:inline-block"></div>
                   <a id="fullextent" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons center">aspect_ratio</i></a>
                   <a id="zoomin" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_in</i></a>
@@ -2033,8 +2040,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             </div>
             <div id="osc-toolbar">
               <div class="left">
-                <a id="getoscdata" class="btn waves-effect waves-light orange lighten-4 disabled" title="Get oscilloscope data."><i style="line-height:inherit" class="material-icons right">play_arrow</i>Start</a>
-                <a id="clearoscdata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear oscilloscope data."><i style="line-height:inherit" class="material-icons center">delete</i></a>
+                <a id="getoscdata" class="btn waves-effect waves-light orange lighten-4 disabled" title="Get oscilloscope data."><i style="line-height:inherit" class="material-icons right">play_arrow</i>Get Oscilloscope Data</a>
               </div>
             </div>
           </nav>
