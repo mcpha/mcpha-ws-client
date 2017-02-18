@@ -74,9 +74,7 @@ limitations under the License.
       const MCPHA_MCA_2_ROI_3_START = "mcpha_mca_2_roi3_start";
       const MCPHA_MCA_2_ROI_3_END = "mcpha_mca_2_roi3_end";
       const MCPHA_OSC_1_IN = "mcpha_osc_1_in";
-      const MCPHA_OSC_1_IN_NEG = "mcpha_osc_1_in_neg";
       const MCPHA_OSC_2_IN = "mcpha_osc_2_in";
-      const MCPHA_OSC_2_IN_NEG = "mcpha_osc_2_in_neg";
       const MCPHA_OSC_TRIG_MODE = "mcpha_osc_trig_mode";
       const MCPHA_OSC_TRIG_SOURCE = "mcpha_osc_trig_source";
       const MCPHA_OSC_TRIG_EDGE = "mcpha_osc_trig_edge";
@@ -376,28 +374,26 @@ limitations under the License.
                 }
                 update_mca2_chart();
               } else if (r === 4) {
-                var status = new Uint32Array(e.data, 4)[0];
-                console.log("device status: ", (status&1));
+                var status = new Uint32Array(e.data, 4)[0] & 1;
+                console.log("device status: ", status);
                 if (osc_acq) {
-                  if ((status&1) === 0) {
+                  if (status === 0) {
+                    osc_acq = false;
                     mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA, 0, 0);
+                    update_osc_acquisition_buttons_text(osc_acq);
                   } else {
                     mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS, 0, 0);
                   }
                 }
               } else if (r === 5) {
-                var data = new Uint16Array(e.data, 4);
+                var data = new Int16Array(e.data, 4);
                 console.log("oscilloscope length: ", data.length);
                 osc1_data.length = 0;
                 osc2_data.length = 0;
-                for (let entry of data.entries()) {
-                  if (entry[0] % 2) {
-                    entry[0] /= 2;
-                    osc2_data.push(entry);
-                  } else {
-                    entry[0] /= 2;
-                    osc1_data.push(entry);
-                  }
+                var n0 = 0, n1 = 0;
+                for (var i=0; i<data.length; i+=2) {
+                  osc1_data.push([n0++,data[i]]);
+                  osc2_data.push([n1++,data[i]]);
                 }
                 update_osc_chart();
               }
@@ -1135,16 +1131,31 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
         //
         //
         function update_mca_acquisition_buttons_text(active) {
-          //$('#enableacq').text(mca ? "Stop" : "Start");
           $('#enableacq').html(active ? STOP_ACQUISITION_TEXT : START_ACQUISITION_TEXT);
           if (active) {
             $('#net-traffic').addClass("infinite");
             $('#net-traffic').addClass("white-text");
-            log_status_message("Starting acquisition", true);
+            log_status_message("Starting mca acquisition", true);
           } else {
             $('#net-traffic').removeClass("infinite");
             $('#net-traffic').removeClass("white-text");
-            log_status_message("Stopping acquisition", true);
+            log_status_message("Stopping mca acquisition", true);
+          }
+        }
+
+        //
+        //
+        //
+        function update_osc_acquisition_buttons_text(active) {
+          $('#getoscdata').html(active ? STOP_ACQUISITION_TEXT : START_ACQUISITION_TEXT);
+          if (active) {
+            $('#net-traffic').addClass("infinite");
+            $('#net-traffic').addClass("white-text");
+            log_status_message("Starting oscilloscope acquisition", false);
+          } else {
+            $('#net-traffic').removeClass("infinite");
+            $('#net-traffic').removeClass("white-text");
+            log_status_message("Stopping oscilloscope acquisition", false);
           }
         }
         
@@ -1187,7 +1198,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             Materialize.toast(msg, TOAST_DELAY, 'toast-css');
           }
           // add to log element
-          $("<p>" + msg + "</p>").appendTo('#messages');
+          $("<span>" + msg + "<span><br/>").appendTo('#messages');
         }
 
         //
@@ -1423,17 +1434,6 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             localStorage.setItem(MCPHA_OSC_1_IN, $('#' + MCPHA_OSC_1_IN).prop('checked') ? "true" : "false");
           }
 
-          // Oscilloscope channel 1 input negative
-          $('#' + MCPHA_OSC_1_IN_NEG).on('click', function (e) {
-            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#' + MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
-          });
-          s = localStorage.getItem(MCPHA_OSC_1_IN_NEG);
-          if (s !== null && s !== 'undefined') {
-            $('#' + MCPHA_OSC_1_IN_NEG).prop('checked', s === "true");
-          } else {
-            localStorage.setItem(MCPHA_OSC_1_IN_NEG, $('#' + MCPHA_OSC_1_IN_NEG).prop('checked') ? "true" : "false");
-          }
-
           // Oscilloscope channel 2 input
           $('#' + MCPHA_OSC_2_IN).on('click', function (e) {
             localStorage.setItem(MCPHA_OSC_2_IN, $('#' + MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
@@ -1443,17 +1443,6 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             $('#' + MCPHA_OSC_2_IN).prop('checked', s === "true");
           } else {
             localStorage.setItem(MCPHA_OSC_2_IN, $('#' + MCPHA_OSC_2_IN).prop('checked') ? "true" : "false");
-          }
-
-          // Oscilloscope channel 2 input negative
-          $('#' + MCPHA_OSC_2_IN_NEG).on('click', function (e) {
-            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#' + MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
-          });
-          s = localStorage.getItem(MCPHA_OSC_2_IN_NEG);
-          if (s !== null && s !== 'undefined') {
-            $('#' + MCPHA_OSC_2_IN_NEG).prop('checked', s === "true");
-          } else {
-            localStorage.setItem(MCPHA_OSC_2_IN_NEG, $('#' + MCPHA_OSC_2_IN_NEG).prop('checked') ? "true" : "false");
           }
 
           // Oscilloscope trigger mode (normal or automatic)
@@ -1700,19 +1689,48 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           });
           
           $('#getoscdata').on('click', function (e) {
-            // set whether mca channel 1 has negative input
-            mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0, localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
-            mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1, localStorage.getItem(MCPHA_MCA_2_IN_NEG) === " true" ? 1 : 0);
-            // Set number of samples to skip before trigger
-            mcpha_send(MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER, 0, 5000);
-            mcpha_send(MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER, 1, 5000);
-            // Set total number of samples to acquire for this run
-            mcpha_send(MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE, 0, 65536);
-            mcpha_send(MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE, 1, 65536);
-            // Start oscilloscope aquisition
-            osc_acq = true;
-            mcpha_send(MCPHA_COMMAND_START_OSCILLOSCOPE, 0, 0);
-            mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS, 0, 0);
+            if (osc_acq) {
+              osc_acq = false;
+            } else {
+              // reset oscilloscope
+              mcpha_send(MCPHA_COMMAND_RESET_OSCILLOSCOPE, 0, 0);
+              // set whether mca channel 1 has negative input
+              mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0, localStorage.getItem(MCPHA_MCA_1_IN_NEG) === "true" ? 1 : 0);
+              // set whether mca channel 2 has negative input
+              mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1, localStorage.getItem(MCPHA_MCA_2_IN_NEG) === "true" ? 1 : 0);
+              // set trigger source
+              if (localStorage.getItem(MCPHA_OSC_TRIG_SOURCE) === "1") {
+                mcpha_send(MCPHA_COMMAND_SET_TRIGGER_SOURCE, 0, 0);
+              } else {
+                mcpha_send(MCPHA_COMMAND_SET_TRIGGER_SOURCE, 1, 0);
+              }
+              // set trigger mode
+              if (localStorage.getItem(MCPHA_OSC_TRIG_MODE) === "n") {
+                mcpha_send(MCPHA_COMMAND_SET_TRIGGER_MODE, 0, 0);
+              } else {
+                mcpha_send(MCPHA_COMMAND_SET_TRIGGER_MODE, 1, 0);
+              }
+              // set trigger edge
+              if (localStorage.getItem(MCPHA_OSC_TRIG_EDGE) === "r") {
+                mcpha_send(MCPHA_COMMAND_SET_TRIGGER_SLOPE, 0, 0);
+              } else {
+                mcpha_send(MCPHA_COMMAND_SET_TRIGGER_SLOPE, 1, 0);
+              }
+              // set trigger level
+              mcpha_send(MCPHA_COMMAND_SET_TRIGGER_LEVEL, 0, parseInt(localStorage.getItem(MCPHA_OSC_TRIG_LEVEL)));
+              // Set number of samples to skip before trigger
+              mcpha_send(MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER, 0, 1000);
+              // Set total number of samples to acquire for this run
+              mcpha_send(MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE, 0, 65536);
+              // Start oscilloscope aquisition
+              osc_acq = true;
+              mcpha_send(MCPHA_COMMAND_START_OSCILLOSCOPE, 0, 0);
+              // set acquisition flag
+              osc_acq = true;
+              // get oscilloscope status
+              mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS, 0, 0);
+            }
+            update_osc_acquisition_buttons_text(osc_acq);
           });
         }
 
@@ -1803,7 +1821,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
       <nav>
         <div class="nav-wrapper brown darken-2">
           <a id="sidebar" href="#"><i class="left large material-icons">menu</i></a>
-          <div class="center brand-logo">MCPHA Client</div>
+          <div class="logo-pos brand-logo">MCPHA Client</div>
           <ul class="right hide-on-med-and-down">
             <li><a  id="mca-1" class="waves-effect waves-light btn orange lighten-4 selectedtab">MCA 1</a></li>
             <li><a id="mca-2" class="waves-effect waves-light btn orange lighten-4">MCA 2</a></li>
@@ -1947,27 +1965,11 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
                   <span class="lever"></span>
                 </label>
               </div>
-              <br/>
-              <div class="switch">
-                <label class="left">Channel 1 Negative Input</label>
-                <label class="right">
-                  <input type="checkbox" id="mcpha_osc_1_in_neg" checked="checked">
-                  <span class="lever"></span>
-                </label>
-              </div>
               <br/><br/>
               <div class="switch switch-row-spacing">
                 <label class="left">Channel 2</label>
                 <label class="right">
                   <input type="checkbox" id="mcpha_osc_2_in" checked="checked">
-                  <span class="lever"></span>
-                </label>
-              </div>
-              <br/>
-              <div class="switch">
-                <label class="left">Channel 2 Negative Input</label>
-                <label class="right">
-                  <input type="checkbox" id="mcpha_osc_2_in_neg" checked="checked">
                   <span class="lever"></span>
                 </label>
               </div>

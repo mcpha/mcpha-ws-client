@@ -10,6 +10,10 @@
   background-color: #808080 !important;
 }
 
+.logo-pos {
+ left: 60px;
+}
+
 .spacer10 {
  padding: 0px 10px; 
 }
