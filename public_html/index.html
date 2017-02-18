@@ -109,6 +109,10 @@ limitations under the License.
       const MCPHA_COMMAND_SET_TIMER_MODE = 12;
       const MCPHA_COMMAND_GET_TIMER = 13;
       const MCPHA_COMMAND_GET_HISTOGRAM_DATA = 14;
+      const MCPHA_COMMAND_SET_TRIGGER_SOURCE = 15;  /* set trigger source (0 for channel 1, 1 for channel 2) */
+      const MCPHA_COMMAND_SET_TRIGGER_SLOPE = 16;   /* set trigger slope (0 for rising, 1 for falling) */
+      const MCPHA_COMMAND_SET_TRIGGER_MODE = 17;    /* set trigger mode (0 for normal, 1 for auto) */
+      const MCPHA_COMMAND_SET_TRIGGER_LEVEL = 18;
       const MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER = 19;
       const MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE = 20;
       const MCPHA_COMMAND_START_OSCILLOSCOPE = 21;
@@ -191,7 +195,7 @@ limitations under the License.
         var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
         var mca2_data = [[0, 0], [16384, 0]], mca2_options = null, mca2_cursor_mode = null, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var osc1_data = [[0, 0], [16384, 0]], osc2_data = [], osc_options = null, osc_cursor_mode;
-        var mca1_acq = false, mca2_acq = false;
+        var mca1_acq = false, mca2_acq = false, osc_acq = false;
         
         // window resized handler
         var resize_handler = debounce(function () {
@@ -373,7 +377,14 @@ limitations under the License.
                 update_mca2_chart();
               } else if (r === 4) {
                 var status = new Uint32Array(e.data, 4)[0];
-                console.log("device status: ", status);
+                console.log("device status: ", (status&1));
+                if (osc_acq) {
+                  if ((status&1) === 0) {
+                    mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA, 0, 0);
+                  } else {
+                    mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS, 0, 0);
+                  }
+                }
               } else if (r === 5) {
                 var data = new Uint16Array(e.data, 4);
                 console.log("oscilloscope length: ", data.length);
@@ -498,9 +509,9 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             xaxis: {
               panRange: false,
               tickDecimals: 0,
-              tickSize: 1000,
-              min: 0,
-              max: 16384,
+//              tickSize: 1000,
+//              min: 0,
+//              max: 16384,
               transform: function (x) {
                 return x;
               }
@@ -510,8 +521,8 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
               labelWidth: 140,
               reserveSpace: true,
               position: "right",
-              max: 100,
-              min: 0,
+//              max: 100,
+//              min: 0,
               ticks: null, //[0.1,1,10,100,1000],
               transform: null//function(v) {
                 //  return Math.log(v+0.0001); /*move away from zero*/
@@ -937,9 +948,16 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             $("#roi3_counts").text(mca2_rois[2].count);
           } else if (tab === "osc") {
             if (osc_options === null) {
-                osc_options = default_osc_chart_options();
+              osc_options = default_osc_chart_options();
             }
-            chart = $.plot("#osc-chart", [osc1_data,osc2_data], osc_options);
+            var d = [];
+            if (localStorage.getItem(MCPHA_OSC_1_IN) === "true") {
+              d.push(osc1_data);
+            }
+            if (localStorage.getItem(MCPHA_OSC_2_IN) === "true") {
+              d.push(osc2_data);
+            }
+            chart = $.plot("#osc-chart", d, osc_options);
           }
         }
 
@@ -1535,7 +1553,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
                 mcpha_send(MCPHA_COMMAND_SET_PHA_MAX_THRESHOLD, 1, parseInt(localStorage.getItem(MCPHA_MCA_ULD)));
                 // set whether mca channel 1 has negative input
                 mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1, localStorage.getItem(MCPHA_MCA_2_IN_NEG) === " true" ? 1 : 0);
-                // set acquisitgion time
+                // set acquisition time
                 mca2_acqtime = parseInt(localStorage.getItem(MCPHA_MCA_2_ACQ_TIME)) * TIMER_FREQ;
                 mcpha_send(MCPHA_COMMAND_SET_TIMER_VALUE, 1, mca2_acqtime);
                 // set timer mode
@@ -1682,8 +1700,19 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           });
           
           $('#getoscdata').on('click', function (e) {
-            // Get oscilloscope data
-            mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA, 0, parseInt(localStorage.getItem(MCPHA_MCA_LLD)));
+            // set whether mca channel 1 has negative input
+            mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 0, localStorage.getItem(MCPHA_MCA_1_IN_NEG) === " true" ? 1 : 0);
+            mcpha_send(MCPHA_COMMAND_SET_NEGATOR_MODE, 1, localStorage.getItem(MCPHA_MCA_2_IN_NEG) === " true" ? 1 : 0);
+            // Set number of samples to skip before trigger
+            mcpha_send(MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER, 0, 5000);
+            mcpha_send(MCPHA_COMMAND_SET_NUMBER_OF_SAMPLES_BEFORE_TRIGGER, 1, 5000);
+            // Set total number of samples to acquire for this run
+            mcpha_send(MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE, 0, 65536);
+            mcpha_send(MCPHA_COMMAND_SET_TOTAL_NUMBER_OF_SAMPLES_TO_ACQUIRE, 1, 65536);
+            // Start oscilloscope aquisition
+            osc_acq = true;
+            mcpha_send(MCPHA_COMMAND_START_OSCILLOSCOPE, 0, 0);
+            mcpha_send(MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS, 0, 0);
           });
         }
 
@@ -1817,7 +1846,7 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
                 <option selected value="json-txt">Text File</option>
                 <option value="ortec-chn">Ortec Maestro Chn</option>
               </select>
-              <label>MCA Data Format</label>
+              <label>Download Data Format</label>
             </div>
             <div class="input-field">
               <label>Decimation Factor</label>
