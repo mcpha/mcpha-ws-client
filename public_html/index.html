@@ -37,6 +37,7 @@ limitations under the License.
     <script type="text/javascript" src="js/jquery.flot.min.js"></script>
     <script type="text/javascript" src="js/jquery.flot.selection.min.js"></script>
     <script type="text/javascript" src="js/jquery.flot.crosshair.min.js"></script>
+    <script type="text/javascript" src="js/jquery.flot.axislabels.js"></script>
     <script type="text/javascript" src="js/download.js"></script>
 
     <script type="text/javascript">
@@ -91,9 +92,10 @@ limitations under the License.
       const WEBSOCKET_DISCONNECTED = 3;
       const WEBSOCKET_ERROR = 4;
 
-      const OSC_UNIT_DATA_VOLT = 10.0 / 32768.0;
       const TIMER_FREQ = 125000000.0;
       const TIME_PER_TICK = 1.0 / TIMER_FREQ;
+      const OSC_Y_AXIS_CONV_FACTOR = 10.0 / 32768.0;
+      const OSC_X_AXIS_CONV_FACTOR = 1000;
       const SHIFT_CODE = 56;
       const SHIFT_CHAN = 52;
       const MCPHA_COMMAND_RESET_TIMER = 0;
@@ -195,7 +197,7 @@ limitations under the License.
         var mca1_data = [[0, 0], [16384, 0]], mca1_options = null, mca1_cursor_mode = null, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
         var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
         var mca2_data = [[0, 0], [16384, 0]], mca2_options = null, mca2_cursor_mode = null, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
-        var osc1_data = [[0, 0], [16384, 0]], osc2_data = [], osc_options = null, osc_cursor_mode;
+        var osc1_data = [[0, 0], [65536, 0]], osc2_data = [[0,0],[65536,0]], osc_options = null, osc_cursor_mode;
         var mca1_acq = false, mca2_acq = false, osc_acq = false;
         
         // window resized handler
@@ -394,10 +396,10 @@ limitations under the License.
                 osc1_data.length = 0;
                 osc2_data.length = 0;
                 for (var i=0; i<data.length; i+=2) {
-                  var n = i / 2;
-                  var v = OSC_UNIT_DATA_VOLT * data[i];
+                  var n = (i / 2) / OSC_X_AXIS_CONV_FACTOR;
+                  var v = OSC_Y_AXIS_CONV_FACTOR * data[i];
                   osc1_data.push([n, v]);
-                  v = OSC_UNIT_DATA_VOLT * data[i+1];
+                  v = OSC_Y_AXIS_CONV_FACTOR * data[i+1];
                   osc2_data.push([n, v]);
                 }
                 update_osc_chart();
@@ -448,6 +450,16 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             points: {
               show: false
             },
+            axisLabels: {
+              show: true
+            },
+            xaxes: [{
+              axisLabel: 'Channel'
+            }],
+            yaxes: [{
+              position: 'right',
+              axisLabel: 'Counts'
+            }],
             xaxis: {
               panRange: false,
               tickDecimals: 0,
@@ -507,6 +519,16 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             points: {
               show: false
             },
+            axisLabels: {
+              show: true
+            },
+            xaxes: [{
+              axisLabel: 'Time (&#181;s)'
+            }],
+            yaxes: [{
+              position: 'right',
+              axisLabel: 'Volts'
+            }],
             xaxis: {
               panRange: false,
               tickDecimals: 0,
