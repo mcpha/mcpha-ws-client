@@ -1655,9 +1655,11 @@ limitations under the License.
             var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
             var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
             if (tab === 'mca-1') {
-              data = dump_mca_data(mca1_data, mca1_rois, format, "mca1-data");
+              data = dump_mca_data(mca1_data, mca1_rois, format, 1,
+              "Sample description", "Detector description", "mca1-data");
             } else if (tab === 'mca-2') {
-              data = dump_mca_data(mca2_data, mca2_rois, format, "mca1-data");
+              data = dump_mca_data(mca2_data, mca2_rois, format, 2,
+              "Sample description", "Detector description", "mca2-data");
             }
             if (data !== null) {
               download(data.payload, data.file);
