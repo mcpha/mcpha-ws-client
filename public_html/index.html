@@ -39,6 +39,7 @@ limitations under the License.
     <script type="text/javascript" src="js/jquery.flot.crosshair.min.js"></script>
     <script type="text/javascript" src="js/jquery.flot.axislabels.js"></script>
     <script type="text/javascript" src="js/download.js"></script>
+    <script type="text/javascript" src="js/mca-file-format.js"></script>
 
     <script type="text/javascript">
       const START_ACQUISITION_TEXT = "<i style='line-height:inherit' class='material-icons right'>play_arrow</i>Start";
@@ -1650,27 +1651,16 @@ limitations under the License.
           });
 
           $('#download').on('click', function (e) {
-            var file = null;
             var data = null;
             var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
             var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
             if (tab === 'mca-1') {
-              if (format === "ortec-chn") {
-                data = "data:application/octet-stream;base64," + uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
-              } else if (format === "json-txt") {
-                data = "data:text/plain,{'x':1234}";
-              }
-              file = "mca1-data.gif";
+              data = dump_mca_data(mca1_data, format, "mca1-data");
             } else if (tab === 'mca-2') {
-              if (format === "ortec-chn") {
-                data = "data:application/octet-stream;base64," + uint_8_to_base_64(new Uint8Array([65, 66, 67, 68]));
-              } else if (format === "json-txt") {
-                data = data = "data:text/plain,{'x':1234}";
-              }
-              file = "mca2-data.gif";
+              data = dump_mca_data(mca2_data, format, "mca1-data");
             }
-            if (file !== null) {
-              download(data, file);
+            if (data !== null) {
+              download(data.payload, data.file);
             }
           });
 
@@ -1917,7 +1907,8 @@ limitations under the License.
             </div>
             <div class="input-field">
               <select id="mcpha_mca_data_format">
-                <option selected value="json-txt">Text File</option>
+                <option selected value="plain-txt">Plain Text File</option>
+                <option value="json-txt">JSON Text File</option>
                 <option value="ortec-chn">Ortec Maestro Chn</option>
               </select>
               <label>Download Data Format</label>
