@@ -33,6 +33,7 @@ function dump_mca_data_json_text(data, rois, filename) {
   json.data = d;
   json.nchannels = data.length;
   json.description = "MCA channel data";
+  json.roi = [{count: rois[0].count},{count: rois[1].count},{count: rois[2].count}];
   var obj = {
     file:  filename+".json",
     payload: "data:text/json," + JSON.stringify(json)
