@@ -86,6 +86,7 @@ limitations under the License.
       const MCPHA_MCA_DATA_FORMAT = "mcpha_mca_data_format";
       const MCPHA_MCA_LLD = "mcpha_mca_lld";
       const MCPHA_MCA_ULD = "mcpha_mca_uld";
+      const MCPHA_MCA_Y_SCALE = "mcpha_mca_y_scale";
       const TOAST_DELAY = 4000;
       const WEBSOCKET_CONNECTED = 1;
       const WEBSOCKET_CONNECTING = 2;
@@ -192,11 +193,11 @@ limitations under the License.
         ;
 
         // MCA chartist and options
-        var chart;
-        var mca1_timer = null, mca1_acqtime = 0, mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
-        var mca1_data = [[0, 0], [16384, 0]], mca1_options = null, mca1_cursor_mode = null, mca1_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
-        var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}];
-        var mca2_data = [[0, 0], [16384, 0]], mca2_options = null, mca2_cursor_mode = null, mca2_y_range = [[100, 500, 2000, 10000, 50000, 200000, 1000000], [0.1, 1, 10, 100, 1000, 10000]];
+        var chart, yaxis_log_ticks = [10,100,1000,10000,100000,1000000];
+        var mca1_timer = null, mca1_acqtime = 0, mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}], mca1_ymax = 0;
+        var mca1_data = [[0, 0], [16384, 0]], mca1_options = null, mca1_cursor_mode = null, mca1_y_range = [100, 500, 2000, 10000, 50000, 200000, 1000000];
+        var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}], mca2_ymax = 0;
+        var mca2_data = [[0, 0], [16384, 0]], mca2_options = null, mca2_cursor_mode = null, mca2_y_range = [100, 500, 2000, 10000, 50000, 200000, 1000000];
         var osc1_data = [[0, 0], [65536, 0]], osc2_data = [[0,0],[65536,0]], osc_options = null, osc_cursor_mode;
         var mca1_acq = false, mca2_acq = false, osc_acq = false;
         
@@ -349,8 +350,12 @@ limitations under the License.
                 mca1_rois[1].data.length = 0;
                 mca1_rois[2].count = 0;
                 mca1_rois[2].data.length = 0;
+                mca1_ymax = 0;
                 for (let entry of data.entries()) {
                   mca1_data.push(entry);
+                  if (entry[1] > mca1_ymax) {
+                    mca1_ymax = entry[1];
+                  }
                   for (let r of mca1_rois) {
                     if (entry[0] >= r.start && entry[0] <=r.end) {
                       r.data.push(entry);
@@ -368,8 +373,12 @@ limitations under the License.
                 mca2_rois[1].data.length = 0;
                 mca2_rois[2].count = 0;
                 mca2_rois[2].data.length = 0;
+                mca2_ymax = 0;
                 for (let entry of data.entries()) {
                   mca2_data.push(entry);
+                  if (entry[1] > mca1_ymax) {
+                    mca2_ymax = entry[1];
+                  }
                   for (let r of mca2_rois) {
                     if (entry[0] >= r.start && entry[0] <=r.end) {
                       r.data.push(entry);
@@ -434,7 +443,6 @@ limitations under the License.
             dataInt[1] = chan;
             dataFloat[0] = data;
             wsock.send(buffer, {binary: true});
-console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           }
         }
 
@@ -532,9 +540,6 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
             xaxis: {
               panRange: false,
               tickDecimals: 0,
-//              tickSize: 1000,
-//              min: 0,
-//              max: 16384,
               transform: function (x) {
                 return x;
               }
@@ -544,16 +549,8 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
               labelWidth: 140,
               reserveSpace: true,
               position: "right",
-//              max: 100,
-//              min: 0,
-              ticks: null, //[0.1,1,10,100,1000],
-              transform: null//function(v) {
-                //  return Math.log(v+0.0001); /*move away from zero*/
-                //},
-                //tickDecimals: 3,
-                //tickFormatter: function (v, axis) {
-                //  return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
-                //}
+              ticks: null,
+              transform: null
             },
             grid: {
               backgroundColor: "#999",
@@ -782,31 +779,15 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
           if (options.yaxis.transform === null) { // Linear y scale
             if (adjustment > 0) {
               for (var i = 0, l = y_range[0].length - 1; i < l; i++) {
-                if (options.yaxis.max <= y_range[0][i]) {
-                  options.yaxis.max = y_range[0][i + 1];
+                if (options.yaxis.max <= y_range[i]) {
+                  options.yaxis.max = y_range[i + 1];
                   break;
                 }
               }
             } else if (adjustment < 0) {
               for (var i = y_range[0].length - 1; i > 0; i--) {
-                if (options.yaxis.max >= y_range[0][i]) {
-                  options.yaxis.max = y_range[0][i - 1];
-                  break;
-                }
-              }
-            }
-          } else { // Log y scale
-            if (adjustment > 0) {
-              for (var i = 0, l = y_range[1].length - 1; i < l; i++) {
-                if (options.yaxis.max <= y_range[1][i]) {
-                  options.yaxis.max = y_range[1][i + 1];
-                  break;
-                }
-              }
-            } else if (adjustment < 0) {
-              for (var i = y_range[1].length - 1; i > 0; i--) {
-                if (options.yaxis.max >= y_range[1][i]) {
-                  options.yaxis.max = y_range[1][i - 1];
+                if (options.yaxis.max >= y_range[i]) {
+                  options.yaxis.max = y_range[i - 1];
                   break;
                 }
               }
@@ -1624,6 +1605,51 @@ console.log("code:" + code + ", chan:" + chan + ", data:" + data);
               // request histogram
               mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, ch, 0);
             }
+          });
+
+          $('#linscale').on('click', function (e) {
+            localStorage.setItem(MCPHA_MCA_Y_SCALE, "lin");
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            var ch = (tab === "mca-1") ? 1 : (tab === "mca-2") ? 2 : -1;
+            if (ch === 1) {
+              mca1_options.yaxis.ticks = null;
+              mca1_options.yaxis.transform = null;
+              mca1_options.yaxis.tickDecimals = 0;
+              mca1_options.yaxis.tickFormatter = null;
+            } else if (ch === 2) {
+              mca2_options.yaxis.ticks = null;
+              mca2_options.yaxis.transform = null;
+              mca2_options.yaxis.tickDecimals = 0;
+              mca2_options.yaxis.tickFormatter = null;
+            }
+            update_chart();
+          });
+
+          $('#logscale').on('click', function (e) {
+            localStorage.setItem(MCPHA_MCA_Y_SCALE, "log");
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            var ch = (tab === "mca-1") ? 1 : (tab === "mca-2") ? 2 : -1;
+            if (ch === 1) {
+              mca1_options.yaxis.transform = function(v) {
+                return Math.log(v+0.0001); /*move away from zero*/
+              };
+              mca1_options.yaxis.ticks = yaxis_log_ticks;
+              //mca1_options.yaxis.tickDecimals = 3;
+              mca1_options.yaxis.tickFormatter = function (v, axis) {
+                return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
+              };
+              mca1_options.yaxis.max = mca1_y_range[mca1_y_range.length-1];
+            } else if (ch === 2) {
+              mca2_options.yaxis.transform = function(v) {
+                return Math.log(v+0.0001); /*move away from zero*/
+              };
+              mca2_options.yaxis.tickDecimals = 2;
+              mca2_options.yaxis.tickFormatter = function (v, axis) {
+                return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
+              };
+              mca2_options.yaxis.max = mca2_y_range[mca2_y_range.length-1];
+            }
+            update_chart();
           });
 
           $('#download').on('click', function (e) {
