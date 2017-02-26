@@ -373,7 +373,7 @@ main {
   -moz-transform: translateX(300px);
   -o-transform: translateX(300px);
   -ms-transform: translateX(300px);
-  width: calc(100% - 250px);
+  width: calc(100% - 260px);
 }
 
 #mca-chart {
