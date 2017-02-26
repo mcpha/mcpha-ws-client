@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-Copyright 2017 John Preston<byhisdeeds@gmail.com> NURAS.
+Copyright 2017 John Preston<byhisdeeds@gmail.com>.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -194,13 +194,30 @@ limitations under the License.
         ;
 
         // MCA chartist and options
-        var chart, yaxis_log_ticks = [10,100,1000,10000,100000,1000000];
-        var mca1_timer = null, mca1_acqtime = 0, mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}], mca1_prev_ymax = 0;
-        var mca1_data = [[0, 0], [16384, 0]], mca1_options = null, mca1_cursor_mode = null, mca1_y_range = [100, 500, 2000, 10000, 50000, 200000, 1000000];
-        var mca2_timer = null, mca2_acqtime = 0, mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}], mca2_prev_ymax = 0;
-        var mca2_data = [[0, 0], [16384, 0]], mca2_options = null, mca2_cursor_mode = null, mca2_y_range = [100, 500, 2000, 10000, 50000, 200000, 1000000];
-        var osc1_data = [[0, 0], [65536, 0]], osc2_data = [[0,0],[65536,0]], osc_options = null, osc_cursor_mode;
-        var mca1_acq = false, mca2_acq = false, osc_acq = false;
+        var VERT_RANGE = [100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000];
+        var chart,
+            yaxis_log_ticks = [10,100,1000,10000,100000,1000000];
+        var mca1_timer = null,
+            mca1_acqtime = 0,
+            mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}],
+            mca1_prev_ymax = 0;
+        var mca1_data = [[0, 0], [16384, 0]],
+            mca1_options = null,
+            mca1_cursor_mode = null;
+        var mca2_timer = null,
+            mca2_acqtime = 0,
+            mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}],
+            mca2_prev_ymax = 0;
+        var mca2_data = [[0, 0], [16384, 0]],
+            mca2_options = null,
+            mca2_cursor_mode = null;
+        var osc1_data = [[0, 0], [65536, 0]],
+            osc2_data = [[0,0],[65536,0]],
+            osc_options = null,
+            osc_cursor_mode;
+        var mca1_acq = false,
+            mca2_acq = false,
+            osc_acq = false;
         
         // window resized handler
         var resize_handler = debounce(function () {
@@ -758,9 +775,9 @@ limitations under the License.
         function adjust_vertical_scale_and_update(adjustment) {
           var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
           if (tab === "mca-1") {
-            adjust_vertical_scale(mca1_options, mca1_y_range, adjustment);
+            adjust_vertical_scale(mca1_options, adjustment);
           } else if (tab === "mca-2") {
-            adjust_vertical_scale(mca2_options, mca2_y_range, adjustment);
+            adjust_vertical_scale(mca2_options, adjustment);
           }
 
           update_chart();
@@ -769,19 +786,19 @@ limitations under the License.
         //
         //
         //
-        function adjust_vertical_scale(options, y_range, adjustment) {
+        function adjust_vertical_scale(options, adjustment) {
           if (options.yaxis.transform === null) {
             if (adjustment > 0) {
-              for (var i = 0, l = y_range.length - 1; i < l; i++) {
-                if (options.yaxis.max <= y_range[i]) {
-                  options.yaxis.max = y_range[i + 1];
+              for (var i = 0, l = VERT_RANGE.length - 1; i < l; i++) {
+                if (options.yaxis.max <= VERT_RANGE[i]) {
+                  options.yaxis.max = VERT_RANGE[i + 1];
                   break;
                 }
               }
             } else if (adjustment < 0) {
-              for (var i = y_range.length - 1; i > 0; i--) {
-                if (options.yaxis.max >= y_range[i]) {
-                  options.yaxis.max = y_range[i - 1];
+              for (var i = VERT_RANGE.length - 1; i > 0; i--) {
+                if (options.yaxis.max >= VERT_RANGE[i]) {
+                  options.yaxis.max = VERT_RANGE[i - 1];
                   break;
                 }
               }
