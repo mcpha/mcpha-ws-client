@@ -88,6 +88,7 @@ limitations under the License.
       const MCPHA_MCA_LLD = "mcpha_mca_lld";
       const MCPHA_MCA_ULD = "mcpha_mca_uld";
       const MCPHA_MCA_Y_SCALE = "mcpha_mca_y_scale";
+      const MCPHA_MCA_AUTO_Y_SCALE = "mcpha_mca_auto_y_scale";
       const TOAST_DELAY = 4000;
       const WEBSOCKET_CONNECTED = 1;
       const WEBSOCKET_CONNECTING = 2;
@@ -132,7 +133,8 @@ limitations under the License.
       const CURSOR_MODE_SETROI_1 = "r1";
       const CURSOR_MODE_SETROI_2 = "r2";
       const CURSOR_MODE_SETROI_3 = "r3";
-
+      const MCA_YRANGE_MIN = 100;
+      const MCA_YRANGE_MAX = 4000000000;
 
       // Returns a function, that, as long as it continues to be invoked, will not
       // be triggered. The function will be called after it stops being called for
@@ -184,7 +186,9 @@ limitations under the License.
         return new Uint8Array(uintArray);
       }
 
-
+      //
+      //
+      //
       $(function () {
         // websocket connection object
         var wsock = null;
@@ -194,7 +198,8 @@ limitations under the License.
         ;
 
         // MCA chartist and options
-        var VERT_RANGE = [100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000];
+        var VERT_RANGE = [];
+//        var VERT_RANGE = [100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000];
         var chart,
             yaxis_log_ticks = [10,100,1000,10000,100000,1000000];
         var mca1_timer = null,
@@ -773,6 +778,21 @@ limitations under the License.
         //
         //
         function adjust_vertical_scale_and_update(adjustment) {
+          // initalise vertical range array if empty
+          if (VERT_RANGE.length === 0) {
+            var t = [1, 2, 5];
+            var n, i = 0, f = MCA_YRANGE_MIN;
+            do
+            {
+              if ((i+1) > t.length)
+              {
+                i = 0;
+                f *= 10;
+              }
+              VERT_RANGE.push(n = (f * t[i++]));
+            }
+            while (n < MCA_YRANGE_MAX);
+          }          
           var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
           if (tab === "mca-1") {
             adjust_vertical_scale(mca1_options, adjustment);
@@ -1305,6 +1325,17 @@ limitations under the License.
             $('#' + MCPHA_MCA_DATA_FORMAT).material_select();
           } else {
             localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#' + MCPHA_MCA_DATA_FORMAT).val());
+          }
+
+          // auto y scale
+          $('#' + MCPHA_MCA_AUTO_Y_SCALE).on('click', function (e) {
+            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked') ? "true" : "false");
+          });
+          s = localStorage.getItem(MCPHA_MCA_AUTO_Y_SCALE);
+          if (s !== null && s !== 'undefined') {
+            $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked', s === "true");
+          } else {
+            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked') ? "true" : "false");
           }
 
           // MCA 1 input negative
@@ -1920,6 +1951,15 @@ limitations under the License.
                 <input type="text" id="mcpha_mca_uld" value="16300">
               </div>
             </div>
+            <div class="switch">
+              <label class="left">Auto Y scale</label>
+              <label class="right">
+                <input type="checkbox" id="mcpha_mca_auto_y_scale">
+                <span class="lever"></span>
+              </label>
+            </div>
+            <br/>
+
             <div class="input-field">
               <select id="mcpha_mca_data_format">
                 <option selected value="plain-txt">Plain Text File</option>
