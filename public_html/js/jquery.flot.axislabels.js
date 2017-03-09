@@ -248,7 +248,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             offsets.y = box.height/2 + box.top;
         } else if (this.position == 'right') {
             offsets.degrees = 90;
-            offsets.x = -60 + box.left + box.width - this.labelWidth/2
+            offsets.x = -30 + box.left + box.width - this.labelWidth/2
                         - this.labelHeight/2;
             offsets.y = box.height/2 + box.top;
         }

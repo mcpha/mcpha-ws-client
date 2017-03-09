@@ -1729,6 +1729,8 @@ console.log("oscilloscope length: ", data.length);
           });
 
           $('#download').on('click', function (e) {
+ $('#m1').modal('open');
+   if (true) return;
             var data = null;
             var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
             var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
@@ -1909,7 +1911,9 @@ console.log("oscilloscope length: ", data.length);
         });
 
         $('select').material_select();
-
+        
+        $('.modal').modal();
+        
         // initialise sidebar
         init_sidebar();
 
@@ -1993,15 +1997,6 @@ console.log("oscilloscope length: ", data.length);
               </label>
             </div>
             <br/>
-
-            <div class="input-field">
-              <select id="mcpha_mca_data_format">
-                <option selected value="plain-txt">Plain Text File</option>
-                <option value="json-txt">JSON Text File</option>
-                <option value="ortec-chn">Ortec Maestro Chn</option>
-              </select>
-              <label>Download Data Format</label>
-            </div>
             <div class="input-field">
               <label>Decimation Factor</label>
               <input type="number" step="4" id="mcpha_dec_factor" value="4">
@@ -2194,7 +2189,43 @@ console.log("oscilloscope length: ", data.length);
         </div>
       </div>
     </main>
-
+    
+    <!-- Download modal -->
+    <div id="m1" class="modal">
+      <div class="modal-content">
+        <h5>Download MCA data</h5>
+        <div class="row">
+          <form class="col s12">
+            <div class="row modal-form-row">
+              <div class="input-field col s12">
+                <select id="mcpha_mca_data_format">
+                  <option selected value="plain-txt">Plain Text File</option>
+                  <option value="json-txt">JSON Text File</option>
+                  <option value="ortec-chn">Ortec Maestro Chn</option>
+                </select>
+                <label for="mcpha_mca_data_format">Download Data Format</label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="input-field col s12">
+                <input id="mcpha_sample_description" type="text" class="validate">
+                <label for="mcpha_sample_description">Sample description</label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="input-field col s12">
+                <input id="mcpha_detector_description" type="text" class="validate">
+                <label for="mcpha_detector_description">Detector description</label>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a class=" modal-action modal-close waves-effect waves-green btn-flat">Submit</a>
+      </div>
+    </div>
+    
     <footer class="page-footer brown darken-2">
       <div>
         <div class="right">
