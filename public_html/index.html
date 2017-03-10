@@ -1913,7 +1913,26 @@ console.log("oscilloscope length: ", data.length);
         $('select').material_select();
         
         $('.modal').modal();
-        
+        $('.modal').modal({
+          dismissible: true,                // Modal can be dismissed by clicking outside of the modal
+          opacity: .5,                      // Opacity of modal background
+          inDuration: 300,                  // Transition in duration
+          outDuration: 200,                 // Transition out duration
+          startingTop: '4%',                // Starting top style attribute
+          endingTop: '10%',                 // Ending top style attribute
+          ready: function(modal, trigger) { // Callback for Modal open. Modal and trigger parameters available.
+            alert("Ready");
+            console.log(modal, trigger);
+          },
+          complete: function() {            // Callback for Modal close
+            alert('Closed');
+          } 
+        });
+$('#download_agree').on('click.close', function (e) {
+  console.log('click agree');
+  // Do stuff ...
+});
+
         // initialise sidebar
         init_sidebar();
 
@@ -1946,7 +1965,46 @@ console.log("oscilloscope length: ", data.length);
       <div class="loader-section section-right"></div>
     </div>
     <!-- End of busy indicator section -->
-
+    
+    <!-- MCA data download modal section -->
+    <div id="m1" class="modal">
+      <div class="modal-content">
+        <h5>Download MCA data</h5>
+        <div class="row">
+          <form class="col s12">
+            <div class="row modal-form-row">
+              <div class="input-field col s8">
+                <input id="mcpha_datafile" type="text" class="validate">
+                <label for="mcpha_datafile">Filename</label>
+              </div>
+              <div class="input-field col s4">
+                <select id="mcpha_mca_data_format">
+                  <option selected value="plain-txt">Plain Text File</option>
+                  <option value="json-txt">JSON Text File</option>
+                  <option value="ortec-chn">Ortec Maestro Chn</option>
+                </select>
+                <label for="mcpha_mca_data_format">Download Data Format</label>
+              </div>
+            </div>
+            <div class="row modal-form-row">
+              <div class="input-field col s6">
+                <input id="mcpha_sample_description" type="text" class="validate">
+                <label for="mcpha_sample_description">Sample description</label>
+              </div>
+              <div class="input-field col s6">
+                <input id="mcpha_detector_description" type="text" class="validate">
+                <label for="mcpha_detector_description">Detector description</label>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer brown darken-2">
+        <a id="download_agree" class=" modal-action modal-close waves-effect waves-green btn-flat orange lighten-4">Download</a>
+      </div>
+    </div>
+    <!-- End of MCA data download modal section -->
+    
     <header>
       <nav>
         <div class="nav-wrapper brown darken-2">
@@ -2189,43 +2247,7 @@ console.log("oscilloscope length: ", data.length);
         </div>
       </div>
     </main>
-    
-    <!-- Download modal -->
-    <div id="m1" class="modal">
-      <div class="modal-content">
-        <h5>Download MCA data</h5>
-        <div class="row">
-          <form class="col s12">
-            <div class="row modal-form-row">
-              <div class="input-field col s12">
-                <select id="mcpha_mca_data_format">
-                  <option selected value="plain-txt">Plain Text File</option>
-                  <option value="json-txt">JSON Text File</option>
-                  <option value="ortec-chn">Ortec Maestro Chn</option>
-                </select>
-                <label for="mcpha_mca_data_format">Download Data Format</label>
-              </div>
-            </div>
-            <div class="row">
-              <div class="input-field col s12">
-                <input id="mcpha_sample_description" type="text" class="validate">
-                <label for="mcpha_sample_description">Sample description</label>
-              </div>
-            </div>
-            <div class="row">
-              <div class="input-field col s12">
-                <input id="mcpha_detector_description" type="text" class="validate">
-                <label for="mcpha_detector_description">Detector description</label>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <a class=" modal-action modal-close waves-effect waves-green btn-flat">Submit</a>
-      </div>
-    </div>
-    
+        
     <footer class="page-footer brown darken-2">
       <div>
         <div class="right">
