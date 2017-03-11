@@ -137,6 +137,8 @@ limitations under the License.
       const MCPHA_COMMAND_GET_OSCILLOSCOPE_STATUS = 22;
       const MCPHA_COMMAND_GET_OSCILLOSCOPE_DATA = 23;
 
+      const ROI_HIGHLIGHT = "lighten-3";
+      
       const CURSOR_MODE_ZOOMIN = "zi";
       const CURSOR_MODE_ZOOMOUT = "zo";
       const CURSOR_MODE_PAN = "pan";
@@ -918,50 +920,50 @@ console.log("oscilloscope length: ", data.length);
             }
           } else if (mode === CURSOR_MODE_SETROI_1) {
             if (current_mode === mode) {
-              $("#roi1").removeClass("darken-2");
+              $("#roi1_container").removeClass(ROI_HIGHLIGHT);
               options.selection.mode = null;
               log_status_message("Set ROI #1 mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
-              $("#roi2").removeClass("darken-2");
-              $("#roi3").removeClass("darken-2");
-              $("#roi1").addClass("darken-2");
+              $("#roi2_container").removeClass(ROI_HIGHLIGHT);
+              $("#roi3_container").removeClass(ROI_HIGHLIGHT);
+              $("#roi1_container").addClass(ROI_HIGHLIGHT);
               options.selection.mode = "x";
               log_status_message("Set ROI #1 mode ON", true);
               return mode;
             }
           } else if (mode === CURSOR_MODE_SETROI_2) {
             if (current_mode === mode) {
-              $("#roi2").removeClass("darken-2");
+              $("#roi2_container").removeClass(ROI_HIGHLIGHT);
               options.selection.mode = null;
               log_status_message("Set ROI #2 mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
-              $("#roi1").removeClass("darken-2");
-              $("#roi3").removeClass("darken-2");
-              $("#roi2").addClass("darken-2");
+              $("#roi1_container").removeClass(ROI_HIGHLIGHT);
+              $("#roi3_container").removeClass(ROI_HIGHLIGHT);
+              $("#roi2_container").addClass(ROI_HIGHLIGHT);
               options.selection.mode = "x";
               log_status_message("Set ROI #2 mode ON", true);
               return mode;
             }
           } else if (mode === CURSOR_MODE_SETROI_3) {
             if (current_mode === mode) {
-              $("#roi3").removeClass("darken-2");
+              $("#roi3_container").removeClass(ROI_HIGHLIGHT);
               options.selection.mode = null;
               log_status_message("Set ROI #1 mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
-              $("#roi1").removeClass("darken-2");
-              $("#roi2").removeClass("darken-2");
-              $("#roi3").addClass("darken-2");
+              $("#roi1_container").removeClass(ROI_HIGHLIGHT);
+              $("#roi2_container").removeClass(ROI_HIGHLIGHT);
+              $("#roi3_container").addClass(ROI_HIGHLIGHT);
               options.selection.mode = "x";
               log_status_message("Set ROI #3 mode ON", true);
               return mode;
             }
           } else if (mode === CURSOR_MODE_CLEAR_ALL) {
-            $("#roi1").removeClass("darken-2");
-            $("#roi2").removeClass("darken-2");
-            $("#roi3").removeClass("darken-2");
+            $("#roi1_container").removeClass(ROI_HIGHLIGHT);
+            $("#roi2_container").removeClass(ROI_HIGHLIGHT);
+            $("#roi3_container").removeClass(ROI_HIGHLIGHT);
             $("#zoomin").removeClass("darken-2");
             $("#zoomout").removeClass("darken-2");
             options.selection.mode = null;
@@ -2073,6 +2075,16 @@ console.log("oscilloscope length: ", data.length);
     </div>
     <!-- End of MCA data download modal section -->
     
+    <!-- Start of ROI dropdown section -->
+    <ul id='roidd' class='dropdown-content collection'>
+      <li id="roi1_container" class="orange lighten-4" style="height: 20px; display:flex"><a id="roi1" href="#!">ROI #1  <span class="badge right"></span></a><i id="roi1_clear" class="material-icons right">delete</i></li>
+      <li id="roi2_container" class="orange lighten-4" style="height: 20px; display:flex"><a id="roi2" href="#!">ROI #2  <span class="badge right"></span></a><i id="roi2_clear" class="material-icons right">delete</i></li>
+      <li id="roi3_container" class="orange lighten-4" style="height: 20px; display:flex"><a id="roi3" href="#!">ROI #3  <span class="badge right"></span></a><i id="roi3_clear" class="material-icons right">delete</i></li>
+      <li class="divider"></li>
+      <li><a href="#!">Clear All ROI's</a></li>
+    </ul>
+    <!-- End of ROI dropdown section -->
+    
     <header>
       <nav>
         <div class="nav-wrapper brown darken-2">
@@ -2273,9 +2285,12 @@ console.log("oscilloscope length: ", data.length);
                 <a id="cleardata" class="waves-effect waves-light btn icon-btn orange lighten-4 disabled" title="Clear acquisition data and time"><i style="line-height:inherit" class="material-icons center">delete</i></a>
               </div>
               <div class="right">
+                  <!--
                   <a id="roi1" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #1"><i style="line-height:inherit" class="material-icons right">looks_one</i>ROI</a>
                   <a id="roi2" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
-                  <a id="roi3" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
+                  <a id="roi3" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" data-activates="roidd" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
+                  -->
+                  <a class="dropdown-button btn  waves-effect waves-light orange lighten-4" data-activates="roidd" data-beloworigin="true" title="Set ROI #3">ROI<div class="mdi-navigation-arrow-drop-down right"></div></a>
                   <div style="width: 10px; display:inline-block"></div>
                   <a id="fullextent" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons center">aspect_ratio</i></a>
                   <a id="zoomin" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_in</i></a>

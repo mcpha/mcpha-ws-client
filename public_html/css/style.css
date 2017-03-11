@@ -403,13 +403,16 @@ main {
 }
 
 #cursor-panel {
-  font-size: 18px;
-  font-family: monospace;
+  font-family: Trebuchet, monospace;
   display: inline-block;
   position: absolute;
-  left: -100px;
+  left: -90px;
   white-space: pre;
   opacity: 0.5;
   z-index: 10;
   width: 400px;
+}
+
+#roidd ul.select-dropdown, ul.dropdown-content{
+  width:150px !important;
 }
