@@ -54,6 +54,14 @@ limitations under the License.
       const MCPHA_DEC_FACTOR = "mcpha_dec_factor";
       const MCPHA_DEVICE_ADDR = "mcpha_device_addr";
       const MCPHA_CONNECT_DEVICE = "mcpha_connect_device";
+      const MCPHA_MCA_DATAFILE = "mcpha_mca_datafile";
+      const MCPHA_MCA_DATAFORMAT = "mcpha_mca_dataformat";
+      const MCPHA_MCA_SAMPLE_DESC = "mcpha_mca_sample_desc";
+      const MCPHA_MCA_DETECTOR_DESC = "mcpha_mca_detector_desc";
+      const MCPHA_MCA_1_SAMDESC = "mcpha_mca_1_samdesc";
+      const MCPHA_MCA_1_DETDESC = "mcpha_mca_1_detdesc";
+      const MCPHA_MCA_1_DATAFILE = "mcpha_mca_1_datafile";
+      const MCPHA_MCA_1_DATAFORMAT = "mcpha_mca_1_dataformat";
       const MCPHA_MCA_1_IN_NEG = "mcpha_mca_1_in_neg";
       const MCPHA_MCA_1_ACQ_TIME = "mcpha_mca_1_acq_time";
       const MCPHA_MCA_1_TRIG_MODE = "mcpha_mca_1_trig_mode";
@@ -66,6 +74,10 @@ limitations under the License.
       const MCPHA_MCA_1_ROI_2_END = "mcpha_mca_1_roi2_end";
       const MCPHA_MCA_1_ROI_3_START = "mcpha_mca_1_roi3_start";
       const MCPHA_MCA_1_ROI_3_END = "mcpha_mca_1_roi3_end";
+      const MCPHA_MCA_2_SAMDESC = "mcpha_mca_2_samdesc";
+      const MCPHA_MCA_2_DETDESC = "mcpha_mca_2_detdesc";
+      const MCPHA_MCA_2_DATAFILE = "mcpha_mca_2_datafile";
+      const MCPHA_MCA_2_DATAFORMAT = "mcpha_mca_2_dataformat";
       const MCPHA_MCA_2_IN_NEG = "mcpha_mca_2_in_neg";
       const MCPHA_MCA_2_ACQ_TIME = "mcpha_mca_2_acq_time";
       const MCPHA_MCA_2_TRIG_MODE = "mcpha_mca_2_trig_mode";
@@ -84,7 +96,6 @@ limitations under the License.
       const MCPHA_OSC_TRIG_SOURCE = "mcpha_osc_trig_source";
       const MCPHA_OSC_TRIG_EDGE = "mcpha_osc_trig_edge";
       const MCPHA_OSC_TRIG_LEVEL = "mcpha_osc_trig_level";
-      const MCPHA_MCA_DATA_FORMAT = "mcpha_mca_data_format";
       const MCPHA_MCA_LLD = "mcpha_mca_lld";
       const MCPHA_MCA_ULD = "mcpha_mca_uld";
       const MCPHA_MCA_Y_SCALE = "mcpha_mca_y_scale";
@@ -1341,18 +1352,6 @@ console.log("oscilloscope length: ", data.length);
             localStorage.setItem(MCPHA_MCA_ULD, $('#' + MCPHA_MCA_ULD).val());
           }
 
-          // MCA data format
-          $('#' + MCPHA_MCA_DATA_FORMAT).on('change', function (e) {
-            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#' + MCPHA_MCA_DATA_FORMAT).val());
-          });
-          s = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
-          if (s !== null && s !== 'undefined') {
-            $('#' + MCPHA_MCA_DATA_FORMAT).val(s);
-            $('#' + MCPHA_MCA_DATA_FORMAT).material_select();
-          } else {
-            localStorage.setItem(MCPHA_MCA_DATA_FORMAT, $('#' + MCPHA_MCA_DATA_FORMAT).val());
-          }
-
           // auto y scale
           $('#' + MCPHA_MCA_AUTO_Y_SCALE).on('click', function (e) {
             auto_y_scale = $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked') ? true : false;
@@ -1729,21 +1728,7 @@ console.log("oscilloscope length: ", data.length);
           });
 
           $('#download').on('click', function (e) {
- $('#m1').modal('open');
-   if (true) return;
-            var data = null;
-            var format = localStorage.getItem(MCPHA_MCA_DATA_FORMAT);
-            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
-            if (tab === 'mca-1') {
-              data = dump_mca_data(mca1_data, mca1_rois, format, 1,
-              "Sample description", "Detector description", "mca1-data");
-            } else if (tab === 'mca-2') {
-              data = dump_mca_data(mca2_data, mca2_rois, format, 2,
-              "Sample description", "Detector description", "mca2-data");
-            }
-            if (data !== null) {
-              download(data.payload, data.file);
-            }
+            $('#m1').modal('open');
           });
 
           // zoom IN button
@@ -1912,7 +1897,7 @@ console.log("oscilloscope length: ", data.length);
 
         $('select').material_select();
         
-        $('.modal').modal();
+        //$('.modal').modal();
         $('.modal').modal({
           dismissible: true,                // Modal can be dismissed by clicking outside of the modal
           opacity: .5,                      // Opacity of modal background
@@ -1921,17 +1906,100 @@ console.log("oscilloscope length: ", data.length);
           startingTop: '4%',                // Starting top style attribute
           endingTop: '10%',                 // Ending top style attribute
           ready: function(modal, trigger) { // Callback for Modal open. Modal and trigger parameters available.
-            alert("Ready");
-            console.log(modal, trigger);
+            // retrieve previous data file metadata
+            var datafile, samdesc, detdesc, dataformat;
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if (tab === "mca-1") {
+              datafile = localStorage.getItem(MCPHA_MCA_1_DATAFILE);
+              if (datafile === null) {
+                datafile = "mca1-data";
+              }
+              dataformat = localStorage.getItem(MCPHA_MCA_1_DATAFORMAT);
+              if (dataformat === null) {
+                dataformat = "plain-txt";
+              }
+              samdesc = localStorage.getItem(MCPHA_MCA_1_SAMDESC);
+              if (samdesc === null) {
+                samdesc = "";
+              }
+              detdesc = localStorage.getItem(MCPHA_MCA_1_DETDESC);
+              if (detdesc === null) {
+                detdesc = "";
+              }
+            } else if (tab === "mca-2") {
+              datafile = localStorage.getItem(MCPHA_MCA_2_DATAFILE);
+              if (datafile === null) {
+                datafile = "mca2-data";
+              }
+              dataformat = localStorage.getItem(MCPHA_MCA_2_DATAFORMAT);
+              if (dataformat === null) {
+                dataformat = "plain-txt";
+              }
+              samdesc = localStorage.getItem(MCPHA_MCA_2_SAMDESC);
+              if (samdesc === null) {
+                samdesc = "";
+              }
+              detdesc = localStorage.getItem(MCPHA_MCA_2_DETDESC);
+              if (detdesc === null) {
+                detdesc = "";
+              }
+            }
+            $('#'+MCPHA_MCA_DATAFORMAT).val(dataformat);
+            $('#'+MCPHA_MCA_DATAFORMAT).material_select();
+            $('#'+MCPHA_MCA_DATAFILE).val(datafile);
+            $('#'+MCPHA_MCA_SAMPLE_DESC).val(samdesc);
+            $('#'+MCPHA_MCA_DETECTOR_DESC).val(detdesc);
+            Materialize.updateTextFields();
           },
-          complete: function() {            // Callback for Modal close
-            alert('Closed');
+          complete: function() {
+            // Callback for Modal close
           } 
         });
-$('#download_agree').on('click.close', function (e) {
-  console.log('click agree');
-  // Do stuff ...
-});
+        // Whats to be done when the download button is pressed
+        $('#download_agree').on('click', function (e) {
+          console.log("saving ...");
+          var datafile, samdesc, detdesc, dataformat, data = null;
+          var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+          if (tab === "mca-1") {
+            // get data file format
+            dataformat = $('#'+MCPHA_MCA_DATAFORMAT).val();
+            localStorage.setItem(MCPHA_MCA_1_DATAFORMAT, dataformat);
+            // get data filename
+            datafile = $('#'+MCPHA_MCA_DATAFILE).val();
+            localStorage.setItem(MCPHA_MCA_1_DATAFILE, datafile);
+            // get sample description
+            samdesc = $('#'+MCPHA_MCA_SAMPLE_DESC).val();
+            localStorage.setItem(MCPHA_MCA_1_SAMDESC, samdesc);
+            // get detector desc
+            detdesc = $('#'+MCPHA_MCA_DETECTOR_DESC).val();
+            localStorage.setItem(MCPHA_MCA_1_DETDESC, detdesc);
+            //
+            console.log("dataformat="+dataformat+",samdesc="+samdesc+",detdesc="+detdesc+",datafile="+datafile);
+            data = dump_mca_data(mca1_data, mca1_rois, dataformat, 1,
+                                 samdesc, detdesc, datafile);
+          } else if (tab === "mca-2") {
+            // get data file format
+            dataformat = $('#'+MCPHA_MCA_DATAFORMAT).val();
+            localStorage.setItem(MCPHA_MCA_2_DATAFORMAT, dataformat);
+            // get data filename
+            datafile = $('#'+MCPHA_MCA_DATAFILE).val();
+            localStorage.setItem(MCPHA_MCA_2_DATAFILE, datafile);
+            // get sample description
+            samdesc = $('#'+MCPHA_MCA_SAMPLE_DESC).val();
+            localStorage.setItem(MCPHA_MCA_2_SAMDESC, samdesc);
+            // get detector desc
+            detdesc = $('#'+MCPHA_MCA_DETECTOR_DESC).val();
+            localStorage.setItem(MCPHA_MCA_2_DETDESC, detdesc);
+            //
+            data = dump_mca_data(mca2_data, mca2_rois, dataformat, 2,
+                                 samdesc, detdesc, datafile);
+          }
+          console.log("data:"+data);
+          if (data !== null) {
+            download(data.payload, data.file, "application/octet-stream");
+            log_status_message("Download complete.", true);
+          }
+        });
 
         // initialise sidebar
         init_sidebar();
@@ -1974,26 +2042,26 @@ $('#download_agree').on('click.close', function (e) {
           <form class="col s12">
             <div class="row modal-form-row">
               <div class="input-field col s8">
-                <input id="mcpha_datafile" type="text" class="validate">
-                <label for="mcpha_datafile">Filename</label>
+                <input id="mcpha_mca_datafile" type="text" class="validate">
+                <label for="mcpha_mca_datafile">Filename</label>
               </div>
               <div class="input-field col s4">
-                <select id="mcpha_mca_data_format">
+                <select id="mcpha_mca_dataformat">
                   <option selected value="plain-txt">Plain Text File</option>
                   <option value="json-txt">JSON Text File</option>
                   <option value="ortec-chn">Ortec Maestro Chn</option>
                 </select>
-                <label for="mcpha_mca_data_format">Download Data Format</label>
+                <label for="mcpha_mca_dataformat">Download Data Format</label>
               </div>
             </div>
             <div class="row modal-form-row">
               <div class="input-field col s6">
-                <input id="mcpha_sample_description" type="text" class="validate">
-                <label for="mcpha_sample_description">Sample description</label>
+                <input id="mcpha_mca_sample_desc" type="text" class="validate">
+                <label for="mcpha_mca_sample_desc">Sample description</label>
               </div>
               <div class="input-field col s6">
-                <input id="mcpha_detector_description" type="text" class="validate">
-                <label for="mcpha_detector_description">Detector description</label>
+                <input id="mcpha_mca_detector_desc" type="text" class="validate">
+                <label for="mcpha_mca_detector_desc">Detector description</label>
               </div>
             </div>
           </form>
