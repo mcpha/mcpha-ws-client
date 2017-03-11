@@ -146,6 +146,7 @@ limitations under the License.
       const CURSOR_MODE_SETROI_1 = "r1";
       const CURSOR_MODE_SETROI_2 = "r2";
       const CURSOR_MODE_SETROI_3 = "r3";
+      const CURSOR_MODE_CLEAR_ROIS = "cr";
       const MCA_YRANGE_MIN = 100;
       const MCA_YRANGE_MAX = 4000000000;
 
@@ -880,9 +881,9 @@ console.log("oscilloscope length: ", data.length);
         function set_cursor_mode(mode) {
           var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
           if (tab === "mca-1") {
-            return (mca1_cursor_mode = set_cursor_mode_options(mode, mca1_cursor_mode, mca1_options));
+            return (mca1_cursor_mode = set_cursor_mode_options(mode, mca1_cursor_mode, mca1_options, mca1_rois));
           } else if (tab === "mca-2") {
-            return (mca2_cursor_mode, set_cursor_mode_options(mode, mca2_cursor_mode, mca2_options));
+            return (mca2_cursor_mode, set_cursor_mode_options(mode, mca2_cursor_mode, mca2_options, mca2_rois));
           } else if (tab === "osc") {
             return (osc_cursor_mode = set_cursor_mode_options(mode, osc_cursor_mode, osc_options));
           }
@@ -892,7 +893,7 @@ console.log("oscilloscope length: ", data.length);
         //
         //
         //
-        function set_cursor_mode_options(mode, current_mode, options) {
+        function set_cursor_mode_options(mode, current_mode, options, rois) {
           $("#zoomin").removeClass("darken-2");
           if (mode === CURSOR_MODE_ZOOMIN) {
             options.selection.mode = null;
@@ -960,6 +961,19 @@ console.log("oscilloscope length: ", data.length);
               log_status_message("Set ROI #3 mode ON", true);
               return mode;
             }
+          } else if (mode === CURSOR_MODE_CLEAR_ROIS) {
+            for (var i=0; i<3; i++) {
+              rois[i].start = -1;
+              rois[i].end = -1;
+              rois[i].count = 0;
+              rois[i].data.length = 0;
+            }
+            $("#roi1_container").removeClass(ROI_HIGHLIGHT);
+            $("#roi2_container").removeClass(ROI_HIGHLIGHT);
+            $("#roi3_container").removeClass(ROI_HIGHLIGHT);
+            options.selection.mode = null;
+            log_status_message("ROI's cleared", true);
+            return CURSOR_MODE_CLEAR_ALL;
           } else if (mode === CURSOR_MODE_CLEAR_ALL) {
             $("#roi1_container").removeClass(ROI_HIGHLIGHT);
             $("#roi2_container").removeClass(ROI_HIGHLIGHT);
@@ -1175,6 +1189,7 @@ console.log("oscilloscope length: ", data.length);
               $('#roi1').removeClass('disabled');
               $('#roi2').removeClass('disabled');
               $('#roi3').removeClass('disabled');
+              $('#rois').removeClass('disabled');
               $('#enableacq').removeClass('disabled');
               $('#cleartimer').removeClass('disabled');
               $('#cleardata').removeClass('disabled');
@@ -1189,6 +1204,7 @@ console.log("oscilloscope length: ", data.length);
               $('#roi1').addClass('disabled');
               $('#roi2').addClass('disabled');
               $('#roi3').addClass('disabled');
+              $('#rois').addClass('disabled');
               $('#enableacq').addClass('disabled');
               $('#cleartimer').addClass('disabled');
               $('#cleardata').addClass('disabled');
@@ -1801,6 +1817,18 @@ console.log("oscilloscope length: ", data.length);
               update_chart();
             }
           });
+
+          // Clear ROI's button
+          $('#roi_clearall').on('click', function (e) {
+            var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+            if ((tab === "mca-1" && mca1_acq) || (tab === "mca-2" && mca2_acq)) {
+              log_status_message("Cannot clear ROI region's while acquiring spectrum.", true);
+              return;
+            } else {
+              set_cursor_mode(CURSOR_MODE_CLEAR_ROIS);
+              update_chart();
+            }
+          });
           
           $('#getoscdata').on('click', function (e) {
             if (osc_acq) {
@@ -2081,7 +2109,7 @@ console.log("oscilloscope length: ", data.length);
       <li id="roi2_container" class="orange lighten-4" style="height: 20px; display:flex"><a id="roi2" href="#!">ROI #2  <span class="badge right"></span></a><i id="roi2_clear" class="material-icons right">delete</i></li>
       <li id="roi3_container" class="orange lighten-4" style="height: 20px; display:flex"><a id="roi3" href="#!">ROI #3  <span class="badge right"></span></a><i id="roi3_clear" class="material-icons right">delete</i></li>
       <li class="divider"></li>
-      <li><a href="#!">Clear All ROI's</a></li>
+      <li><a id="roi_clearall" class="orange lighten-5" href="#!">Clear All ROI's</a></li>
     </ul>
     <!-- End of ROI dropdown section -->
     
@@ -2290,7 +2318,7 @@ console.log("oscilloscope length: ", data.length);
                   <a id="roi2" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" title="Set ROI #2"><i style="line-height:inherit" class="material-icons right">looks_two</i>ROI</a>
                   <a id="roi3" class="btn icon-text-btn waves-effect waves-light orange lighten-4 disabled" data-activates="roidd" title="Set ROI #3"><i style="line-height:inherit" class="material-icons right">looks_3</i>ROI</a>
                   -->
-                  <a class="dropdown-button btn  waves-effect waves-light orange lighten-4" data-activates="roidd" data-beloworigin="true" title="Set ROI #3">ROI<div class="mdi-navigation-arrow-drop-down right"></div></a>
+                  <a id="rois" class="dropdown-button btn icon-btn waves-effect waves-light orange lighten-4 disabled" data-activates="roidd" data-beloworigin="true" title="Set ROI's">ROI</a>
                   <div style="width: 10px; display:inline-block"></div>
                   <a id="fullextent" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons center">aspect_ratio</i></a>
                   <a id="zoomin" class="btn icon-btn waves-effect waves-light orange lighten-4 disabled" title="Full extent"><i style="line-height:inherit" class="material-icons">zoom_in</i></a>
