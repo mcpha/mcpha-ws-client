@@ -14,6 +14,32 @@
  * limitations under the License.
  */
 
+function uint_8_to_base_64(u8Arr) {
+  var CHUNK_SIZE = 0x8000; //arbitrary number
+  var index = 0;
+  var length = u8Arr.length;
+  var result = '';
+  var slice;
+  while (index < length) {
+    slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
+    result += String.fromCharCode.apply(null, slice);
+    index += CHUNK_SIZE;
+  }
+  return btoa(result);
+}
+
+//
+//
+//
+function string_to_uint(string) {
+  var string = btoa(unescape(encodeURIComponent(string))),
+    charList = string.split(''), uintArray = [];
+  for (var i = 0; i < charList.length; i++) {
+    uintArray.push(charList[i].charCodeAt(0));
+  }
+  return new Uint8Array(uintArray);
+}
+
 function dump_mca_data(data, rois, format, num, sdesc, ddesc, filename) {
   if (format === "ortec-chn") {
     return dump_mca_data_ortec_chn(data, rois, num, sdesc, ddesc, filename);
