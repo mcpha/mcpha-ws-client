@@ -215,7 +215,6 @@ limitations under the License.
         var VERT_RANGE = [], VERT_LOG_RANGE = [];
         var chart,
             auto_y_scale,
-            y_scale,
             yaxis_log_ticks = [10,100,1000,10000,100000,1000000];
         var mca1_timer = null,
             mca1_acqtime = 0,
@@ -847,8 +846,8 @@ console.log("oscilloscope length: ", data.length);
             }
             while (n < MCA_YRANGE_MAX);
           }
-          console.log("vert_range:"+VERT_RANGE);
-          console.log("vert_range:"+VERT_LOG_RANGE);
+console.log("vert_range:"+VERT_RANGE);
+console.log("vert_log_range:"+VERT_LOG_RANGE);
           var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
           if (tab === "mca-1") {
             adjust_vertical_scale(mca1_options, mca1_ymax, auto_y_scale, adjustment);
@@ -864,69 +863,76 @@ console.log("oscilloscope length: ", data.length);
         //
         function adjust_vertical_scale(options, ymax, auto_scale, adjustment) {
           var yscale = localStorage.getItem(MCPHA_MCA_Y_SCALE);
-          if (options.yaxis.transform === null) {
-            if (adjustment > 0) {
-              if (yscale === "lin") {
-                for (var i = 0; i < VERT_RANGE.length - 1; i++) {
-                  if (options.yaxis.max <= VERT_RANGE[i]) {
-                    options.yaxis.max = VERT_RANGE[i + 1];
-                    break;
-                  }
-                }
-              } else if (yscale === "log") {
-                for (var i = 0; i < VERT_LOG_RANGE.length - 1; i++) {
-                  if (options.yaxis.max <= VERT_LOG_RANGE[i]) {
-                    options.yaxis.max = VERT_LOG_RANGE[i + 1];
-                    break;
-                  }
+console.log("adjust_vertical_scale - y_scale="+yscale+", auto_scale="+auto_scale+", adjustment="+adjustment);
+          if (adjustment > 0) {
+            if (yscale === "lin") {
+              for (var i = 0; i < VERT_RANGE.length - 1; i++) {
+                if (options.yaxis.max <= VERT_RANGE[i]) {
+                  options.yaxis.max = VERT_RANGE[i + 1];
+console.log("lin - options.yaxis.max="+options.yaxis.max);
+                  break;
                 }
               }
-            } else if (adjustment < 0) {
-              if (yscale === "lin") {
-                for (var i = VERT_RANGE.length - 1; i > 0; i--) {
-                  if (options.yaxis.max >= VERT_RANGE[i]) {
-                    options.yaxis.max = VERT_RANGE[i - 1];
-                    break;
-                  }
-                }
-              } else if (yscale === "log") {
-                for (var i = VERT_LOG_RANGE.length - 1; i > 0; i--) {
-                  if (options.yaxis.max >= VERT_LOG_RANGE[i]) {
-                    options.yaxis.max = VERT_LOG_RANGE[i - 1];
-                    break;
-                  }
+            } else if (yscale === "log") {
+              for (var i = 0; i < VERT_LOG_RANGE.length - 1; i++) {
+                if (options.yaxis.max <= VERT_LOG_RANGE[i]) {
+                  options.yaxis.max = VERT_LOG_RANGE[i + 1];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
                 }
               }
-            } else if (adjustment === 0) {
-              if (yscale === "lin") {
-                for (var i = VERT_RANGE.length - 1; i > 0; i--) {
-                  if (ymax >= VERT_RANGE[i]) {
-                    options.yaxis.max = VERT_RANGE[i];
-                    break;
-                  }
-                }
-              } else if (yscale === "log") {
-                for (var i = VERT_LOG_RANGE.length - 1; i > 0; i--) {
-                  if (ymax >= VERT_LOG_RANGE[i]) {
-                    options.yaxis.max = VERT_LOG_RANGE[i];
-                    break;
-                  }
+            }
+          } else if (adjustment < 0) {
+            if (yscale === "lin") {
+              for (var i = VERT_RANGE.length - 1; i > 0; i--) {
+                if (options.yaxis.max >= VERT_RANGE[i]) {
+                  options.yaxis.max = VERT_RANGE[i - 1];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
                 }
               }
-            } else if (auto_scale) {
-              if (yscale === "lin") {
-                for (var i = 0; i < VERT_RANGE.length; i++) {
-                  if (ymax < VERT_RANGE[i]) {
-                    options.yaxis.max = VERT_RANGE[i];
-                    break;
-                  }
+            } else if (yscale === "log") {
+              for (var i = VERT_LOG_RANGE.length - 1; i > 0; i--) {
+                if (options.yaxis.max >= VERT_LOG_RANGE[i]) {
+                  options.yaxis.max = VERT_LOG_RANGE[i - 1];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
                 }
-              } else if (yscale === "log") {
-                for (var i = 0; i < VERT_RANGE.length; i++) {
-                  if (ymax < VERT_LOG_RANGE[i]) {
-                    options.yaxis.max = VERT_LOG_RANGE[i];
-                    break;
-                  }
+              }
+            }
+          } else if (adjustment === 0) {
+            if (yscale === "lin") {
+              for (var i = VERT_RANGE.length - 1; i > 0; i--) {
+                if (ymax >= VERT_RANGE[i]) {
+                  options.yaxis.max = VERT_RANGE[i];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
+                }
+              }
+            } else if (yscale === "log") {
+              for (var i = VERT_LOG_RANGE.length - 1; i > 0; i--) {
+                if (ymax >= VERT_LOG_RANGE[i]) {
+                  options.yaxis.max = VERT_LOG_RANGE[i];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
+                }
+              }
+            }
+          } else if (auto_scale) {
+            if (yscale === "lin") {
+              for (var i = 0; i < VERT_RANGE.length; i++) {
+                if (ymax < VERT_RANGE[i]) {
+                  options.yaxis.max = VERT_RANGE[i];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
+                }
+              }
+            } else if (yscale === "log") {
+              for (var i = 0; i < VERT_RANGE.length; i++) {
+                if (ymax < VERT_LOG_RANGE[i]) {
+                  options.yaxis.max = VERT_LOG_RANGE[i];
+console.log("log - options.yaxis.max="+options.yaxis.max);
+                  break;
                 }
               }
             }
@@ -1428,19 +1434,18 @@ console.log("oscilloscope length: ", data.length);
             localStorage.setItem(MCPHA_MCA_ULD, $('#' + MCPHA_MCA_ULD).val());
           }
 
-          // auto y scale
+          // Auto Y scale
           $('#' + MCPHA_MCA_AUTO_Y_SCALE).on('click', function (e) {
             auto_y_scale = $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked') ? true : false;
-            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, ""+auto_y_scale);
+            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, auto_y_scale);
             adjust_vertical_scale_and_update(0);
           });
           s = localStorage.getItem(MCPHA_MCA_AUTO_Y_SCALE);
           if (s !== null && s !== 'undefined') {
             auto_y_scale = (s === "true");
-            $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked', ""+auto_y_scale);
           } else {
-            auto_y_scale = $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked') ? true : false;
-            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, ""+auto_y_scale);
+            auto_y_scale = false;
+            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, auto_y_scale);
           }
 
           // MCA 1 input negative
@@ -1789,7 +1794,8 @@ console.log("oscilloscope length: ", data.length);
                 return "10" + (Math.round( Math.log(v)/Math.LN10)).toString().sup();
               };
               mca1_prev_ymax = mca1_options.yaxis.max;
-              mca1_options.yaxis.max = 10000;//mca1_y_range[mca1_y_range.length-1];
+              //mca1_options.yaxis.max = 10000;//mca1_y_range[mca1_y_range.length-1];
+              adjust_vertical_scale_and_update(0);
             } else if (ch === 2) {
               mca2_options.yaxis.transform = function(v) {
                 return Math.log(v+0.0001); /*move away from zero*/
