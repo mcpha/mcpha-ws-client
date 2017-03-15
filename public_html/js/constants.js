@@ -120,7 +120,7 @@ const CURSOR_MODE_SETROI_2 = "r2";
 const CURSOR_MODE_SETROI_3 = "r3";
 const CURSOR_MODE_CLEAR_ROIS = "cr";
 
-const HIGHLIGHT_BUTTON = "darken-1";
+const HIGHLIGHT_BUTTON = "lighten-3";
 
 const MCA_YRANGE_MIN = 10;
 const MCA_YRANGE_MAX = 4000000000;

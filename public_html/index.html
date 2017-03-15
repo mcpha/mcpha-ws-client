@@ -630,8 +630,8 @@ console.log("oscilloscope length: ", data.length);
             }
           } else if (adjustment === 0) {  // Update Y scale range
             if (yscale === "lin") {
-              for (var i = VERT_LIN_RANGE.length - 1; i > 0; i--) {
-                if (ymax >= VERT_LIN_RANGE[i]) {
+              for (var i = 0; i < VERT_LIN_RANGE.length; i++) {
+                if (ymax < VERT_LIN_RANGE[i]) {
                   options.yaxis.range_index = i;
                   options.yaxis.max = YAXIS_LIN_TICKS[options.yaxis.range_index].ymax;
                   options.yaxis.ticks = YAXIS_LIN_TICKS[options.yaxis.range_index].ticks;
@@ -640,8 +640,8 @@ console.log("oscilloscope length: ", data.length);
                 }
               }
             } else if (yscale === "log") {
-              for (var i = VERT_LOG_RANGE.length - 1; i > 0; i--) {
-                if (ymax >= VERT_LOG_RANGE[i]) {
+              for (var i = 0; i < VERT_LOG_RANGE.length; i++) {
+                if (ymax < VERT_LOG_RANGE[i]) {
                   options.yaxis.range_index = i;
                   options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
                   options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
