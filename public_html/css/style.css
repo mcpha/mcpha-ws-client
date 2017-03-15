@@ -12,6 +12,7 @@
 
 .logo-pos {
  left: 60px;
+ text-align: left !important;
 }
 
 .spacer10 {
@@ -38,6 +39,12 @@
 
 .icon-block .material-icons {
   font-size: inherit;
+}
+
+@media only screen and (max-width: 992px) {
+  nav .brand-logo {
+    left: 16%;
+  }
 }
 
 body {
