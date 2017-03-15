@@ -14,6 +14,38 @@
  * limitations under the License.
  */
 
+//
+//
+//
+function formatISODate(doffset) {
+  var d = new Date(doffset);
+  var day = d.getDate();
+  var month = d.getMonth() + 1;
+  var year = d.getFullYear();
+  var hours = d.getHours();
+  var mins = d.getMinutes();
+  var secs = d.getSeconds();
+  if (day < 10) {
+    day = "0" + day;
+  }
+  if (month < 10) {
+    month = "0" + month;
+  }
+  if (hours < 10) {
+    hours = "0" + hours;
+  }
+  if (mins < 10) {
+    mins = "0" + mins;
+  }
+  if (secs < 10) {
+    secs = "0" + secs;
+  }
+  return year+"-"+month+"-"+day+"T"+hours+":"+mins+":"+secs+"Z";
+}
+
+//
+//
+//
 function uint_8_to_base_64(u8Arr) {
   var CHUNK_SIZE = 0x8000; //arbitrary number
   var index = 0;
@@ -40,17 +72,17 @@ function string_to_uint(string) {
   return new Uint8Array(uintArray);
 }
 
-function dump_mca_data(data, rois, format, num, sdesc, ddesc, filename) {
+function dump_mca_data(data, rois, format, num, acqdate, sdesc, ddesc, filename) {
   if (format === "ortec-chn") {
-    return dump_mca_data_ortec_chn(data, rois, num, sdesc, ddesc, filename);
+    return dump_mca_data_ortec_chn(data, rois, num, acqdate, sdesc, ddesc, filename);
   } else if (format === "plain-txt") {
-    return dump_mca_data_plain_text(data, rois, num, sdesc, ddesc, filename);
+    return dump_mca_data_plain_text(data, rois, num, acqdate, sdesc, ddesc, filename);
   } else if (format === "json-txt") {
-    return dump_mca_data_json_text(data, rois, num, sdesc, ddesc, filename);
+    return dump_mca_data_json_text(data, rois, num, acqdate, sdesc, ddesc, filename);
   }
 }
 
-function dump_mca_data_json_text(data, rois, num, sdesc, ddesc, filename) {
+function dump_mca_data_json_text(data, rois, num, acqdate, sdesc, ddesc, filename) {
   var json = {};
   var d = [];
   for (var i=0; i<data.length; i++) {
@@ -59,6 +91,7 @@ function dump_mca_data_json_text(data, rois, num, sdesc, ddesc, filename) {
   json.data = d;
   json.nchannels = data.length;
   json.mca = num;
+  json.acqdate = formatISODate(acqdate);
   json.sample = sdesc;
   json.detector = ddesc;
   json.roi = [{count: rois[0].count},{count: rois[1].count},{count: rois[2].count}];
@@ -69,9 +102,10 @@ function dump_mca_data_json_text(data, rois, num, sdesc, ddesc, filename) {
   return obj;
 }
 
-function dump_mca_data_plain_text(data, rois, num, sdesc, ddesc, filename) {
+function dump_mca_data_plain_text(data, rois, num, acqdate, sdesc, ddesc, filename) {
   var buf = "data:text/plain,# MCA #" + num + " with " + data.length +
-            " channels%0D# Sample description%0D" + sdesc+
+            " channels%0D# Acquisition date%0D" + formatISODate(acqdate)+
+            "%0D# Sample description%0D" + sdesc+
             "%0D# Detector description%0D" + ddesc+
             "%0D# ROI data%0D" +
             rois[0].count + "%0D" +
@@ -121,7 +155,7 @@ typedef struct {
   // with values between 0-69 mapping to 2000-2069 and 70-100 to 1970-2000
 ******************/
 
-function dump_mca_data_ortec_chn(data, rois, num, sdesc, ddesc, filename) {
+function dump_mca_data_ortec_chn(data, rois, num, acqdate, sdesc, ddesc, filename) {
   var buf = new ArrayBuffer(512+32+(data.length*4));
   var v = new DataView(buf);
   // File type -1 for .chn

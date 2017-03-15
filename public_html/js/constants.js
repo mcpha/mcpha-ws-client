@@ -120,13 +120,15 @@ const CURSOR_MODE_SETROI_2 = "r2";
 const CURSOR_MODE_SETROI_3 = "r3";
 const CURSOR_MODE_CLEAR_ROIS = "cr";
 
+const HIGHLIGHT_BUTTON = "darken-1";
+
 const MCA_YRANGE_MIN = 10;
 const MCA_YRANGE_MAX = 4000000000;
 
-var VERT_RANGE = [], VERT_LOG_RANGE = [];
+var VERT_LIN_RANGE = [], VERT_LOG_RANGE = [];
 
 // initalise vertical range array if empty
-if (VERT_RANGE.length === 0) {
+if (VERT_LIN_RANGE.length === 0) {
   var t = [1, 2, 5];
   var n, i = 0, f = MCA_YRANGE_MIN;
   do
@@ -136,11 +138,33 @@ if (VERT_RANGE.length === 0) {
       i = 0;
       f *= 10;
     }
-    VERT_RANGE.push(n = (f * t[i++]));
+    n = (f * t[i++]) + 0.0001;
+    VERT_LIN_RANGE.push(n);
     if (i === 1) {
-      VERT_LOG_RANGE.push(f * t[0]);
+      VERT_LOG_RANGE.push(n);
     }
   }
   while (n < MCA_YRANGE_MAX);
+}
+
+// initialise ticks arfray
+var YAXIS_LOG_TICKS = new Array();
+for (var i=0; i<VERT_LOG_RANGE.length; i++) {
+  var t = {
+    ymax: VERT_LOG_RANGE[i],
+    ticks: VERT_LOG_RANGE.slice((i<3)?0:i-3,(i<3)?3:i+1)
+  };
+  YAXIS_LOG_TICKS[i] = t;
+}
+
+
+// initialise ticks arfray
+var YAXIS_LIN_TICKS = new Array();
+for (var i=0; i<VERT_LIN_RANGE.length; i++) {
+  var t = {
+    ymax: VERT_LIN_RANGE[i],
+    ticks: VERT_LIN_RANGE.slice((i<3)?0:i-3,(i<3)?3:i+1)
+  };
+  YAXIS_LIN_TICKS[i] = t;
 }
 
