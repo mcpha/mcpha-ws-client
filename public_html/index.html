@@ -628,7 +628,7 @@ console.log("oscilloscope length: ", data.length);
                 }
               }
             }
-          } else if (adjustment === 0) {  // Update Y scale range
+          } else if (adjustment === 0 || auto_scale) {  // Update Y scale range / autoscale
             if (yscale === "lin") {
               for (var i = 0; i < VERT_LIN_RANGE.length; i++) {
                 if (ymax < VERT_LIN_RANGE[i]) {
@@ -646,28 +646,6 @@ console.log("oscilloscope length: ", data.length);
                   options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
                   options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
 //console.log("ADJ0 log - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
-                  break;
-                }
-              }
-            }
-          } else if (auto_scale) {        // Auto increment/decrement Y scale range
-            if (yscale === "lin") {
-              for (var i = 0; i < VERT_LIN_RANGE.length; i++) {
-                if (ymax < VERT_LIN_RANGE[i]) {
-                  options.yaxis.range_index = i;
-                  options.yaxis.max = YAXIS_LIN_TICKS[options.yaxis.range_index].ymax;
-                  options.yaxis.ticks = YAXIS_LIN_TICKS[options.yaxis.range_index].ticks;
-//console.log("AUTO lin - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
-                  break;
-                }
-              }
-            } else if (yscale === "log") {
-              for (var i = 0; i < VERT_LIN_RANGE.length; i++) {
-                if (ymax < VERT_LOG_RANGE[i]) {
-                  options.yaxis.range_index = i;
-                  options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
-                  options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
-//console.log("AUTO log - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
                   break;
                 }
               }
@@ -694,28 +672,28 @@ console.log("oscilloscope length: ", data.length);
         //
         //
         function set_cursor_mode_options(mode, current_mode, options, rois) {
-          $("#zoomin").removeClass("darken-2");
+          $("#zoomin").removeClass(HIGHLIGHT_BUTTON);
           if (mode === CURSOR_MODE_ZOOMIN) {
             options.selection.mode = null;
             if (current_mode === mode) {
-              $("#zoomin").removeClass("darken-2");
+              $("#zoomin").removeClass(HIGHLIGHT_BUTTON);
               log_status_message("ZOOM mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
-              $("#zoomout").removeClass("darken-2");
-              $("#zoomin").addClass("darken-2");
+              $("#zoomout").removeClass(HIGHLIGHT_BUTTON);
+              $("#zoomin").addClass(HIGHLIGHT_BUTTON);
               log_status_message("ZOOM mode IN", true);
               return mode;
             }
           } else if (mode === CURSOR_MODE_ZOOMOUT) {
             options.selection.mode = null;
             if (current_mode === mode) {
-              $("#zoomout").removeClass("darken-2");
+              $("#zoomout").removeClass(HIGHLIGHT_BUTTON);
               log_status_message("ZOOM mode OFF", true);
               return CURSOR_MODE_CLEAR_ALL;
             } else {
-              $("#zoomin").removeClass("darken-2");
-              $("#zoomout").addClass("darken-2");
+              $("#zoomin").removeClass(HIGHLIGHT_BUTTON);
+              $("#zoomout").addClass(HIGHLIGHT_BUTTON);
               log_status_message("ZOOM mode OUT", true);
               return mode;
             }
