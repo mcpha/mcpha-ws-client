@@ -168,3 +168,39 @@ for (var i=0; i<VERT_LIN_RANGE.length; i++) {
   YAXIS_LIN_TICKS[i] = t;
 }
 
+// websocket connection object
+var wsock = null;
+
+// Device connection status
+var devstatus = WEBSOCKET_DISCONNECTED;
+;
+
+// MCA chartist and options
+var chart,
+    auto_y_scale,
+    init_complete = false,
+    acqdat = [0, 0];
+var mca1_timer = null,
+    mca1_acqtime = 0,
+    mca1_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}],
+    mca1_prev_ymax = -1,
+    mca1_ymax = 0;
+var mca1_data = [[0, 0], [16384, 0]],
+    mca1_options = null,
+    mca1_cursor_mode = null;
+var mca2_timer = null,
+    mca2_acqtime = 0,
+    mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}],
+    mca2_prev_ymax = -1,
+    mca2_ymax = 0;
+var mca2_data = [[0, 0], [16384, 0]],
+    mca2_options = null,
+    mca2_cursor_mode = null;
+var osc1_data = [[0, 0], [65536, 0]],
+    osc2_data = [[0,0],[65536,0]],
+    osc_options = null,
+    osc_cursor_mode;
+var mca1_acq = false,
+    mca2_acq = false,
+    osc_acq = false;
+
