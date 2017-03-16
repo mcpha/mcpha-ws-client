@@ -543,3 +543,37 @@ function update_chart() {
   }
 }
 
+
+//
+//
+//
+function update_mca1_chart() {
+  if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
+    update_chart();
+  }
+}
+
+//
+//
+//
+function update_mca2_chart() {
+  if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
+    update_chart();
+  }
+}
+
+//
+//
+//
+function update_osc_chart() {
+  if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'osc') {
+    update_chart();
+  }
+}
+
+//
+//
+//
+function init_tabs() {
+  select_tab(localStorage.getItem(MCPHA_SELECTED_TAB));
+}

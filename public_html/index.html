@@ -697,33 +697,6 @@ console.log("oscilloscope length: ", data.length);
         }
 
         //
-        //
-        //
-        function update_mca1_chart() {
-          if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-1') {
-            update_chart();
-          }
-        }
-
-        //
-        //
-        //
-        function update_mca2_chart() {
-          if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'mca-2') {
-            update_chart();
-          }
-        }
-
-        //
-        //
-        //
-        function update_osc_chart() {
-          if (localStorage.getItem(MCPHA_SELECTED_TAB) === 'osc') {
-            update_chart();
-          }
-        }
-
-        //
         // Toggle sidebar
         //
         function toggle_sidebar() {
@@ -895,8 +868,8 @@ console.log("oscilloscope length: ", data.length);
             auto_y_scale = (s === "true");
           } else {
             auto_y_scale = false;
-            localStorage.setItem(MCPHA_MCA_AUTO_Y_SCALE, auto_y_scale);
           }
+          $('#' + MCPHA_MCA_AUTO_Y_SCALE).prop('checked', auto_y_scale); 
 
           // MCA 1 input negative
           $('#' + MCPHA_MCA_1_IN_NEG).on('click', function (e) {
@@ -1139,8 +1112,7 @@ console.log("oscilloscope length: ", data.length);
                   // request timer value
                   mcpha_send(MCPHA_COMMAND_GET_TIMER, 0, 0);
                   // request either histogram or oscilloscope data
-                  if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca1") {
-                    // request histogram data
+                  if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-1") {
                     mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 0, 0);
                   } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
                   }
@@ -1174,7 +1146,7 @@ console.log("oscilloscope length: ", data.length);
                   // request timer value
                   mcpha_send(MCPHA_COMMAND_GET_TIMER, 1, 0);
                   // request either histogram or oscilloscope data
-                  if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca2") {
+                  if (localStorage.getItem(MCPHA_SELECTED_TAB) === "mca-2") {
                     // request histogram data
                     mcpha_send(MCPHA_COMMAND_GET_HISTOGRAM_DATA, 1, 0);
                   } else if (localStorage.getItem(MCPHA_SELECTED_TAB) === "osc") {
@@ -1459,11 +1431,6 @@ console.log("oscilloscope length: ", data.length);
             }
             update_osc_acquisition_buttons_text(osc_acq);
           });
-        }
-
-        //
-        function init_tabs() {
-          select_tab(localStorage.getItem(MCPHA_SELECTED_TAB));
         }
 
         //
