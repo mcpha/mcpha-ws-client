@@ -514,7 +514,7 @@ function update_chart() {
   if (tab === "mca-1") {
     chart = $.plot("#mca-chart",
                    [mca1_data,
-                   {data:mca1_cursor_data, points:{show: true, symbol: "bar"}, color:"#f00"},
+                   {data:mca1_cursor.data, points:{show: true, symbol: "bar"}, color:"#f00"},
                    {data:mca1_rois[0].data, color:"#a22"},
                    {data:mca1_rois[1].data, color:"#a22"},
                    {data:mca1_rois[2].data, color:"#a22"}],
@@ -522,12 +522,12 @@ function update_chart() {
     $("#roi1_counts").text(mca1_rois[0].count);
     $("#roi2_counts").text(mca1_rois[1].count);
     $("#roi3_counts").text(mca1_rois[2].count);
-    $("#cursor").text(mca1_cursor_data[0][0]);
-    $("#counts").text(mca1_cursor_data[0][1]);
+    $("#cursor").text(mca1_cursor.channel);
+    $("#counts").text(mca1_cursor.data[0][1]);
   } else if (tab === "mca-2") {
     chart = $.plot("#mca-chart",
                    [mca2_data,
-                   {data:mca2_cursor_data, points:{show: true}, color:"#f00"},
+                   {data:mca2_cursor.data, points:{show: true, symbol: "bar"}, color:"#f00"},
                    {data:mca2_rois[0].data, color:"#a22"},
                    {data:mca2_rois[1].data, color:"#a22"},
                    {data:mca2_rois[2].data, color:"#a22"}],
@@ -535,8 +535,8 @@ function update_chart() {
     $("#roi1_counts").text(mca2_rois[0].count);
     $("#roi2_counts").text(mca2_rois[1].count);
     $("#roi3_counts").text(mca2_rois[2].count);
-    $("#cursor").text(mca2_cursor_data[0][0]);
-    $("#counts").text(mca2_cursor_data[0][1]);
+    $("#cursor").text(mca2_cursor.channel);
+    $("#counts").text(mca2_cursor.data[0][1]);
   } else if (tab === "osc") {
     var d = [];
     if (localStorage.getItem(MCPHA_OSC_1_IN) === "true") {
@@ -587,15 +587,10 @@ function init_tabs() {
 //
 //
 //
-function update_cursor_pos(adj) {
-  var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
-  if (tab === "mca-1") {
-    mca1_cursor += adj;
-    mca1_cursor_data[0][0] = mca1_cursor;
-    mca1_cursor_data[0][1] = mca1_data[mca1_cursor][1];
-  } else if (tab === "mca-2") {
-    
-  }
+function update_cursor_pos(cursor, adj) {
+  cursor.channel += adj;
+  cursor.data[0][0] = cursor.channel;
+  cursor.data[0][1] = mca1_data[cursor.channel][1];
   
   update_chart();
 }
