@@ -38,6 +38,7 @@ limitations under the License.
     <script type="text/javascript" src="js/jquery.flot.selection.min.js"></script>
     <script type="text/javascript" src="js/jquery.flot.crosshair.min.js"></script>
     <script type="text/javascript" src="js/jquery.flot.axislabels.js"></script>
+    <script type="text/javascript" src="js/jquery.flot.symbol.js"></script>
     <script type="text/javascript" src="js/download.min.js"></script>
     <script type="text/javascript" src="js/constants.min.js"></script>
     <script type="text/javascript" src="js/mca-utils.min.js"></script>
@@ -204,6 +205,9 @@ limitations under the License.
                     }
                   }
                 }
+        mca1_cursor = 5446;
+        mca1_cursor_data[0][0] = 5446;
+        mca1_cursor_data[0][1] = mca1_data[5446][1];
                 if (mca1_prev_ymax === -1) {
                   mca1_prev_ymax = mca1_ymax;
                   adjust_vertical_scale_and_update(0);
@@ -336,12 +340,12 @@ console.log("oscilloscope length: ", data.length);
                 } else {
                   $("#mca-chart").css("cursor", "pointer", "important");
                 }
-                var x = pos.x.toFixed(0);
-                if (x > 0 && x < chart.getData()[0].data.length) {
-                  var y = chart.getData()[0].data[x][1];
-                  $("#cursor").text(x);
-                  $("#counts").text(y);
-                }
+//                var x = pos.x.toFixed(0);
+//                if (x > 0 && x < chart.getData()[0].data.length) {
+//                  var y = chart.getData()[0].data[x][1];
+//                  $("#cursor").text(x);
+//                  $("#counts").text(y);
+//                }
               } else {
                 $("#spectrum-placeholder").css("cursor", "pointer", "important");
               }
@@ -1277,7 +1281,7 @@ console.log("oscilloscope length: ", data.length);
               detdesc = $('#'+MCPHA_MCA_DETECTOR_DESC).val();
               localStorage.setItem(MCPHA_MCA_1_DETDESC, detdesc);
               //
-              console.log("dataformat="+dataformat+",samdesc="+samdesc+",detdesc="+detdesc+",datafile="+datafile);
+console.log("dataformat="+dataformat+",samdesc="+samdesc+",detdesc="+detdesc+",datafile="+datafile);
               data = dump_mca_data(mca1_data, mca1_rois, dataformat, 1,
                                    acqdat[0], samdesc, detdesc, datafile);
             } else if (tab === "mca-2") {
@@ -1441,11 +1445,13 @@ console.log("oscilloscope length: ", data.length);
           // left = 37, up = 38, right = 39, down = 40
           $(document).keyup(function (e) {
             if (e.which === 37) {
+              update_cursor_pos(-1);
             } else if (e.which === 38) {
               if (!auto_y_scale) {
                 adjust_vertical_scale_and_update(+1);
               }
             } else if (e.which === 39) {
+              update_cursor_pos(+1);
             } else if (e.which === 40) {
               if (!auto_y_scale) {
                 adjust_vertical_scale_and_update(-1);

@@ -187,7 +187,7 @@ var mca1_timer = null,
     mca1_ymax = 0;
 var mca1_data = [[0, 0], [16384, 0]],
     mca1_options = null,
-    mca1_cursor_mode = null;
+    mca1_cursor, mca1_cursor_data = [[0,0]], mca1_cursor_mode = null;
 var mca2_timer = null,
     mca2_acqtime = 0,
     mca2_rois = [{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]},{start:-1,end:-1,count:0,data:[]}],
@@ -195,7 +195,7 @@ var mca2_timer = null,
     mca2_ymax = 0;
 var mca2_data = [[0, 0], [16384, 0]],
     mca2_options = null,
-    mca2_cursor_mode = null;
+    mca2_cursor, mca2_cursor_data = [[0,0]], mca2_cursor_mode = null;
 var osc1_data = [[0, 0], [65536, 0]],
     osc2_data = [[0,0],[65536,0]],
     osc_options = null,
