@@ -289,7 +289,7 @@ function log_status_message(msg, onscreen) {
     Materialize.toast(msg, TOAST_DELAY, 'toast-css');
   }
   // add to log element
-  $("<span>" + msg + "<span><br/>").appendTo('#messages');
+  $("<span>" + msg + "<span><br/>").appendTo('#log-container');
 }
 
 
@@ -365,7 +365,6 @@ function init_sidebar() {
   $('#mca-1-sidebar').css('display', 'none');
   $('#mca-2-sidebar').css('display', 'none');
   $('#osc-sidebar').css('display', 'none');
-  $('#log-sidebar').css('display', 'none');
 
   //
   // Install tab click handler to show/hide sidebar menu
@@ -419,80 +418,65 @@ function devstatus_string(code) {
 //
 function select_tab(tab) {
   // save this as the current selected tab
-  localStorage.setItem(MCPHA_SELECTED_TAB, tab);
   // hide unselected tabs and show selected tab
   if (tab === "mca-1" || tab === null) {
+    localStorage.setItem(MCPHA_SELECTED_TAB, tab);
     // hide/unhide relevant sidebar
     $('#mca-1-sidebar').css('display', 'inline');
     $('#mca-2-sidebar').css('display', 'none');
     $('#osc-sidebar').css('display', 'none');
-    $('#log-sidebar').css('display', 'none');
     // show relevant container
     $('#mca-toolbar').css('display', 'inline');
     $('#osc-toolbar').css('display', 'none');
     $('#mca-container').css('display', 'inline');
     $('#osc-container').css('display', 'none');
-    $('#log-container').css('display', 'none');
     // show tab selection bar
     $('#mca-1').addClass("selectedtab");
     $('#mca-2').removeClass("selectedtab");
     $('#osc').removeClass("selectedtab");
-    $('#log').removeClass("selectedtab");
     // update cursor panel
     $("#acqtime_s").text(localStorage.getItem(MCPHA_MCA_1_ACQ_TIME));
   } else if (tab === "mca-2") {
-    // hine/unhide relevant sidebar
+    localStorage.setItem(MCPHA_SELECTED_TAB, tab);
+    // hide/unhide relevant sidebar
     $('#mca-1-sidebar').css('display', 'none');
     $('#mca-2-sidebar').css('display', 'inline');
     $('#osc-sidebar').css('display', 'none');
-    $('#log-sidebar').css('display', 'none');
     // show relevant container
     $('#mca-toolbar').css('display', 'inline');
     $('#osc-toolbar').css('display', 'none');
     $('#mca-container').css('display', 'inline');
     $('#osc-container').css('display', 'none');
-    $('#log-container').css('display', 'none');
     // show tab selection bar
     $('#mca-1').removeClass("selectedtab");
     $('#mca-2').addClass("selectedtab");
     $('#osc').removeClass("selectedtab");
-    $('#log').removeClass("selectedtab");
     // update cursor panel
     $("#acqtime_s").text(localStorage.getItem(MCPHA_MCA_2_ACQ_TIME));
   } else if (tab === "osc") {
-    // hine/unhide relevant sidebar
+    localStorage.setItem(MCPHA_SELECTED_TAB, tab);
+    // hide/unhide relevant sidebar
     $('#mca-1-sidebar').css('display', 'none');
     $('#mca-2-sidebar').css('display', 'none');
     $('#osc-sidebar').css('display', 'inline');
-    $('#log-sidebar').css('display', 'none');
     // show relevant container
     $('#mca-toolbar').css('display', 'none');
     $('#osc-toolbar').css('display', 'inline');
     $('#mca-container').css('display', 'none');
     $('#osc-container').css('display', 'inline');
-    $('#log-container').css('display', 'none');
     // show tab selection bar
     $('#mca-1').removeClass("selectedtab");
     $('#mca-2').removeClass("selectedtab");
     $('#osc').addClass("selectedtab");
-    $('#log').removeClass("selectedtab");
   } else if (tab === "log") {
-    // hine/unhide relevant sidebar
-    $('#mca-1-sidebar').css('display', 'none');
-    $('#mca-2-sidebar').css('display', 'none');
-    $('#osc-sidebar').css('display', 'none');
-    $('#log-sidebar').css('display', 'inline');
-    // show relevant container
-    $('#mca-toolbar').css('display', 'none');
-    $('#osc-toolbar').css('display', 'none');
-    $('#mca-container').css('display', 'none');
-    $('#osc-container').css('display', 'none');
-    $('#log-container').css('display', 'inline');
-    // show tab selection bar
-    $('#mca-1').removeClass("selectedtab");
-    $('#mca-2').removeClass("selectedtab");
-    $('#osc').removeClass("selectedtab");
-    $('#log').addClass("selectedtab");
+    // hide/unhide log-message div
+    if ($('#log').hasClass('selectedtab')) {
+      $('#log').removeClass("selectedtab");
+      $('#log-container').css('display', 'none');
+    } else {
+      $('#log').addClass("selectedtab");
+      $('#log-container').css('display', 'inline');
+    }
   }
   // if websocket connection establed then we enable toolbar buttons
   if (wsock !== null) {console.log("readystate="+wsock.readyState);}
@@ -593,4 +577,195 @@ function update_cursor_pos(cursor, adj) {
   cursor.data[0][1] = mca1_data[cursor.channel][1];
   
   update_chart();
+}
+
+//
+//
+//
+function get_zoom_ticks(xmin, xmax, options) {
+  var xrng = xmax - xmin;
+  if (xrng < 100) {
+    t = 10;
+  } else if (xrng < 500) {
+    t = 50;
+  } else if (xrng < 1000) {
+    t = 100;
+  } else if (xrng < 2000) {
+    t = 200;
+  } else if (xrng < 5000) {
+    t = 500;
+  } else if (xrng < 10000) {
+    t = 1000;
+  } else {
+    t = 1000;
+  }
+  return t;
+}
+
+
+//
+//
+//
+function adjust_vertical_scale_and_update(adjustment) {
+  var tab = localStorage.getItem(MCPHA_SELECTED_TAB);
+  if (tab === "mca-1") {
+    adjust_vertical_scale(mca1_options, mca1_ymax, auto_y_scale, adjustment);
+  } else if (tab === "mca-2") {
+    adjust_vertical_scale(mca2_options, mca2_ymax, auto_y_scale, adjustment);
+  }
+  update_chart();
+}
+
+//
+//
+//
+function adjust_vertical_scale(options, ymax, auto_scale, adjustment) {
+  var yscale = localStorage.getItem(MCPHA_MCA_Y_SCALE);
+//console.log("adjust_vertical_scale - y_scale="+yscale+", ymax="+ymax+", auto_scale="+auto_scale+", adjustment="+adjustment);
+  if (ymax === 0) {               // Initialise Y scale range and ticks
+    if (yscale === "lin") {
+      options.yaxis.range_index = 2;
+      options.yaxis.max = YAXIS_LIN_TICKS[options.yaxis.range_index].ymax;
+      options.yaxis.ticks = YAXIS_LIN_TICKS[options.yaxis.range_index].ticks;
+//console.log("INIT lin - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+    } else if (yscale === "log") {
+      options.yaxis.range_index = 2;
+      options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
+      options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
+//console.log("INIT log - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+    }
+  } else if (adjustment > 0) {    // Increment Y scale range
+    if (yscale === "lin") {
+      for (var i = 0; i < VERT_LIN_RANGE.length - 1; i++) {
+        if (options.yaxis.max <= VERT_LIN_RANGE[i]) {
+          options.yaxis.range_index = i + 1;
+          options.yaxis.max = YAXIS_LIN_TICKS[options.yaxis.range_index].ymax;
+          options.yaxis.ticks = YAXIS_LIN_TICKS[options.yaxis.range_index].ticks;
+//console.log("INC lin - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+          break;
+        }
+      }
+    } else if (yscale === "log") {
+      for (var i = 0; i < VERT_LOG_RANGE.length - 1; i++) {
+        if (options.yaxis.max <= VERT_LOG_RANGE[i]) {
+          options.yaxis.range_index = i + 1;
+          options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
+          options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
+//console.log("INC log - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+          break;
+        }
+      }
+    }
+  } else if (adjustment < 0) {    // Decrement Y scale range
+    if (yscale === "lin") {
+      for (var i = VERT_LIN_RANGE.length - 1; i > 0; i--) {
+        if (options.yaxis.max >= VERT_LIN_RANGE[i]) {
+          options.yaxis.range_index = i - 1;
+          options.yaxis.max = YAXIS_LIN_TICKS[options.yaxis.range_index].ymax;
+          options.yaxis.ticks = YAXIS_LIN_TICKS[options.yaxis.range_index].ticks;
+//console.log("DEC lin - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+          break;
+        }
+      }
+    } else if (yscale === "log") {
+      for (var i = VERT_LOG_RANGE.length - 1; i > 0; i--) {
+        if (options.yaxis.max >= VERT_LOG_RANGE[i]) {
+          options.yaxis.range_index = i - 1;
+          options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
+          options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
+//console.log("DEC log - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+          break;
+        }
+      }
+    }
+  } else if (adjustment === 0 || auto_scale) {  // Update Y scale range / autoscale
+    if (yscale === "lin") {
+      for (var i = 0; i < VERT_LIN_RANGE.length; i++) {
+        if (ymax < VERT_LIN_RANGE[i]) {
+          options.yaxis.range_index = i;
+          options.yaxis.max = YAXIS_LIN_TICKS[options.yaxis.range_index].ymax;
+          options.yaxis.ticks = YAXIS_LIN_TICKS[options.yaxis.range_index].ticks;
+//console.log("ADJ0 lin - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+          break;
+        }
+      }
+    } else if (yscale === "log") {
+      for (var i = 0; i < VERT_LOG_RANGE.length; i++) {
+        if (ymax < VERT_LOG_RANGE[i]) {
+          options.yaxis.range_index = i;
+          options.yaxis.max = YAXIS_LOG_TICKS[options.yaxis.range_index].ymax;
+          options.yaxis.ticks = YAXIS_LOG_TICKS[options.yaxis.range_index].ticks;
+//console.log("ADJ0 log - options.yaxis.range_index="+options.yaxis.range_index+", options.yaxis.max="+options.yaxis.max+", options.yaxis.ticks="+options.yaxis.ticks);
+          break;
+        }
+      }
+    }
+  }
+}
+        
+//
+//
+//
+function zoom_in_around_cursor_xpos(xpos, data, axes, options, refresh) {
+  if (data.length > 0) {
+    // zoom in by a factor of 2
+    var dmin = parseInt(axes.xaxis.datamin);
+    var dmax = parseInt(axes.xaxis.datamax);
+    var xmin = parseInt(options.xaxis.min);
+    var xmax = parseInt(options.xaxis.max);
+    var xrng = (xmax - xmin) / 2;
+    if (xrng > 100) {
+      xrng /= 2;
+      xmin += (parseInt(xpos) - xmin) / 2;
+      xmax -= (xmax - parseInt(xpos)) / 2;
+      if (xmin < dmin) {
+        xmin = dmin;
+        xmax = xmin + (xrng * 2);
+      } else if (xmax > dmax) {
+        xmax = dmax;
+        xmin = xmax - (xrng * 2);
+      }
+      options.xaxis.min = xmin;
+      options.xaxis.max = xmax;
+      options.xaxis.tickSize = get_zoom_ticks(xmin, xmax, options);
+      if (refresh) {
+        update_chart();
+      }
+    }
+  }
+}
+
+//
+//
+//
+function zoom_out_around_cursor_xpos(xpos, data, axes, options, refresh) {
+  if (data.length > 0) {
+    // zoom out by a factor of 2
+    var dmin = parseInt(axes.xaxis.datamin);
+    var dmax = parseInt(axes.xaxis.datamax);
+    var xmin = parseInt(options.xaxis.min);
+    var xmax = parseInt(options.xaxis.max);
+    var xrng = xmax - xmin;
+    if (xrng * 2 > (dmax - dmin)) {
+      xmin = dmin;
+      xmax = dmax;
+    } else {
+      xmin -= xrng;
+      xmax += xrng;
+      if (xmin < dmin) {
+        xmin = dmin;
+        xmax = xmin + (xrng * 2);
+      } else if (xmax > dmax) {
+        xmax = dmax;
+        xmin = xmax - (xrng * 2);
+      }
+    }
+    options.xaxis.min = xmin;
+    options.xaxis.max = xmax;
+    options.xaxis.tickSize = get_zoom_ticks(xmin, xmax, options);
+console.log("options:" + options.toString());
+    if (refresh) {
+      update_chart();
+    }
+  }
 }

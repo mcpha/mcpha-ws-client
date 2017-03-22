@@ -423,3 +423,18 @@ main {
 #roidd ul.select-dropdown, ul.dropdown-content{
   width:150px !important;
 }
+
+#log-container {
+  display: none;
+  width: calc(100% - 10px);
+  height: 100px;
+  position: fixed;
+  left: 0px;
+  bottom: 0px;
+  z-index: 1000;
+  opacity: .8;
+  overflow: auto;
+  margin: 5px;
+  padding: 5px;
+  border: 2px solid black;
+}
