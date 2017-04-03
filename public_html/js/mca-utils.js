@@ -73,7 +73,7 @@ function default_mca_chart_options() {
     xaxis: {
       panRange: false,
       tickDecimals: 0,
-      tickSize: 2000,
+      tickSize: 4000,
       min: 0,
       max: 16384,
       transform: function (x) {
